@@ -1,0 +1,59 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="Fabric Backup Lite"
+           Manufacturer="WeData"
+           Version="1.4.0"
+           UpgradeCode="B7E4A3F1-2C6D-4E8B-9F5A-1D3C7B0E5A2F"
+           Scope="perMachine">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Fabric Backup Lite is already installed." />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Icon shown in Add/Remove Programs and shortcuts -->
+    <Icon Id="AppIcon" SourceFile="$(sys.SOURCEFILEDIR)..\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPHELPLINK"    Value="mailto:Walter@inegocios.cl" />
+
+    <!-- UI: Welcome → License/Message → Choose Directory → Install -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <Feature Id="ProductFeature" Title="Fabric Backup Lite" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="CMP_Shortcuts" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="WeDataFolder" Name="WeData">
+        <Directory Id="INSTALLFOLDER" Name="Fabric Backup Lite">
+          <Component Id="CMP_Shortcuts" Guid="*">
+            <Shortcut Id="StartMenuShortcut"
+                      Directory="ProgramMenuFolder"
+                      Name="Fabric Backup Lite"
+                      Description="Microsoft Fabric &amp; Power BI Backup Tool"
+                      Target="[INSTALLFOLDER]Fabric_backup_lite.exe"
+                      WorkingDirectory="INSTALLFOLDER"
+                      Icon="AppIcon" />
+            <Shortcut Id="DesktopShortcut"
+                      Directory="DesktopFolder"
+                      Name="Fabric Backup Lite"
+                      Description="Microsoft Fabric &amp; Power BI Backup Tool"
+                      Target="[INSTALLFOLDER]Fabric_backup_lite.exe"
+                      WorkingDirectory="INSTALLFOLDER"
+                      Icon="AppIcon" />
+            <RegistryValue Root="HKCU"
+                           Key="Software\WeData\FabricBackupLite"
+                           Name="installed"
+                           Type="integer"
+                           Value="1"
+                           KeyPath="yes" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+  </Package>
+
+</Wix>

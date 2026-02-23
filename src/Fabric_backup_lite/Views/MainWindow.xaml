@@ -1,0 +1,460 @@
+<Window x:Class="Fabric_backup_lite.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Fabric Backup Lite" Height="720" Width="1100"
+        WindowStartupLocation="CenterScreen"
+        Background="#F0F2F5"
+        Icon="/Assets/app.ico">
+
+    <Window.Resources>
+
+        <!-- ============================================================ -->
+        <!-- Colores base                                                   -->
+        <!-- ============================================================ -->
+        <SolidColorBrush x:Key="PrimaryBrush"   Color="#0B5394"/>
+        <SolidColorBrush x:Key="FabricBrush"    Color="#2D6A4F"/>
+        <SolidColorBrush x:Key="PowerBIBrush"   Color="#7B2D8B"/>
+        <SolidColorBrush x:Key="SurfaceBrush"   Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush_"   Color="#DDE1E7"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#6B7280"/>
+
+        <!-- ============================================================ -->
+        <!-- TreeViewItem style                                             -->
+        <!-- ============================================================ -->
+        <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+            <Setter Property="Padding"    Value="2,3"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <EventSetter Event="Expanded" Handler="TreeViewItem_Expanded"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding NodeType}" Value="Workspace">
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Foreground" Value="#1A3D5C"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding NodeType}" Value="FabricCategory">
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Foreground" Value="#2D6A4F"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding NodeType}" Value="PowerBICategory">
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Foreground" Value="#7B2D8B"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding NodeType}" Value="ItemTypeGroup">
+                    <Setter Property="FontWeight" Value="Medium"/>
+                    <Setter Property="Foreground" Value="#374151"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding NodeType}" Value="Placeholder">
+                    <Setter Property="Foreground" Value="#9CA3AF"/>
+                    <Setter Property="FontStyle"  Value="Italic"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ============================================================ -->
+        <!-- Botones de acción principal                                    -->
+        <!-- ============================================================ -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Padding"          Value="18,8"/>
+            <Setter Property="FontSize"         Value="13"/>
+            <Setter Property="FontWeight"       Value="SemiBold"/>
+            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="BorderThickness"  Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SmallButton" TargetType="Button">
+            <Setter Property="Padding"         Value="10,5"/>
+            <Setter Property="FontSize"        Value="11"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <!-- ================================================================ -->
+    <!-- Layout principal: panel izquierdo | splitter | panel derecho     -->
+    <!-- ================================================================ -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="310" MinWidth="200"/>
+            <ColumnDefinition Width="5"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================================ -->
+        <!-- PANEL IZQUIERDO — Explorador de workspaces                   -->
+        <!-- ============================================================ -->
+        <Border Grid.Column="0"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush_}"
+                BorderThickness="0,0,1,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header del panel izquierdo -->
+                <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Padding="14,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Text="EXPLORADOR"
+                                   Foreground="White"
+                                   FontSize="11"
+                                   FontWeight="Bold"
+                                   Margin="0"/>
+
+                        <TextBlock Grid.Row="1"
+                                   Text="{Binding SelectedItemsInfo}"
+                                   Foreground="#A8C8E8"
+                                   FontSize="11"
+                                   Margin="0,4,0,0"/>
+                    </Grid>
+                </Border>
+
+                <!-- Botones Seleccionar Todo / Ninguno -->
+                <Border Grid.Row="1"
+                        Background="#F8FAFB"
+                        BorderBrush="{StaticResource BorderBrush_}"
+                        BorderThickness="0,0,0,1"
+                        Padding="10,8">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="✓ Todo"
+                                Command="{Binding SelectAllCommand}"
+                                Style="{StaticResource SmallButton}"
+                                Background="#E8F4EA"
+                                Foreground="#2D6A4F"
+                                Margin="0,0,6,0"/>
+                        <Button Content="✗ Ninguno"
+                                Command="{Binding DeselectAllCommand}"
+                                Style="{StaticResource SmallButton}"
+                                Background="#FDE8E8"
+                                Foreground="#B91C1C"
+                                Margin="0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- TreeView con checkboxes -->
+                <TreeView Grid.Row="2"
+                          x:Name="WorkspaceTreeView"
+                          ItemsSource="{Binding WorkspaceTreeNodes}"
+                          Background="{StaticResource SurfaceBrush}"
+                          BorderThickness="0"
+                          Padding="4,4"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                          SelectedItemChanged="WorkspaceTreeView_SelectedItemChanged">
+
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Margin="2,1"
+                                        ToolTip="{Binding TooltipText}">
+                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                          IsThreeState="True"
+                                          IsEnabled="{Binding IsSupported}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,5,0"
+                                          Click="TreeNodeCheckBox_Click"/>
+                                <TextBlock Text="{Binding TypeIcon}"
+                                           FontSize="13"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,5,0">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
+                                                    <Setter Property="Opacity" Value="0.4"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding Name}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           MaxWidth="190">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
+                                                    <Setter Property="Foreground" Value="#9CA3AF"/>
+                                                    <Setter Property="FontStyle"  Value="Italic"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Grid>
+        </Border>
+
+        <!-- ============================================================ -->
+        <!-- SPLITTER                                                       -->
+        <!-- ============================================================ -->
+        <GridSplitter Grid.Column="1"
+                      Width="5"
+                      HorizontalAlignment="Stretch"
+                      Background="{StaticResource BorderBrush_}"
+                      Cursor="SizeWE"/>
+
+        <!-- ============================================================ -->
+        <!-- PANEL DERECHO — Configuración y log                          -->
+        <!-- ============================================================ -->
+        <Grid Grid.Column="2" Margin="16,14,16,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            
+            <!-- Row 0: Header / Autenticación                            -->
+            
+            <Border Grid.Row="0"
+                    Background="{StaticResource PrimaryBrush}"
+                    CornerRadius="10"
+                    Padding="18,14"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Microsoft Fabric Backup Lite"
+                                   FontSize="19" FontWeight="Bold"
+                                   Foreground="White" Margin="0"/>
+                        <TextBlock Text="{Binding UserDisplayName}"
+                                   FontSize="12" Foreground="#A8C8E8"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="Iniciar sesión"
+                            Command="{Binding SignInCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Background="#1F6DB5"
+                            Foreground="White"
+                            Width="130"/>
+                </Grid>
+            </Border>
+
+            
+            <!-- Row 1: Carpeta de destino                                -->
+            
+            <Border Grid.Row="1"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush_}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,12"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBlock Text="📂" FontSize="20" Margin="0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Carpeta de destino"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding DestinationPath, Mode=TwoWay}"
+                                 IsReadOnly="True"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 FontSize="13"
+                                 Padding="0"
+                                 Foreground="#111827"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Content="Examinar..."
+                            Command="{Binding SelectDestinationCommand}"
+                            Style="{StaticResource SmallButton}"
+                            Background="#EEF2FF"
+                            Foreground="#4338CA"
+                            Width="90"
+                            Margin="12,0,0,0"/>
+                </Grid>
+            </Border>
+
+            
+            <!-- Row 2: Log                                               -->
+            
+            <Border Grid.Row="2"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush_}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12,10"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Log de actividad"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Margin="0,0,0,8"/>
+
+                    <ScrollViewer Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  x:Name="LogScrollViewer">
+                        <ItemsControl ItemsSource="{Binding LogMessages}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"
+                                               FontFamily="Consolas"
+                                               FontSize="11.5"
+                                               Foreground="#374151"
+                                               Margin="0,1"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            
+            <!-- Row 3: Barra de progreso                                  -->
+            
+            <Border Grid.Row="3"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush_}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,10"
+                    Margin="0,0,0,12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding StatusMessage}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               Margin="0,0,0,6"/>
+
+                    <ProgressBar Grid.Row="1"
+                                 Height="8"
+                                 Minimum="0"
+                                 Maximum="{Binding ProgressMaximum}"
+                                 Value="{Binding ProgressValue}"
+                                 Foreground="{StaticResource PrimaryBrush}"
+                                 Background="#E5E7EB"/>
+                </Grid>
+            </Border>
+
+            
+            <!-- Row 4: Botones de acción                                  -->
+            
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding SelectedItemsInfo}"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           Foreground="{StaticResource TextMutedBrush}"/>
+
+                <Button Grid.Column="1"
+                        Content="▶  Iniciar Backup"
+                        Command="{Binding StartBackupCommand}"
+                        Style="{StaticResource PrimaryButton}"
+                        Background="#16A34A"
+                        Foreground="White"
+                        Width="150"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="2"
+                        Content="✕  Cancelar"
+                        Command="{Binding CancelCommand}"
+                        Style="{StaticResource PrimaryButton}"
+                        Background="#DC2626"
+                        Foreground="White"
+                        Width="110"/>
+            </Grid>
+
+            <!-- Row 5: Aviso versión Beta -->
+
+            <Border Grid.Row="5"
+                    Background="#FFFBEB"
+                    BorderBrush="#FDE68A"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,10"
+                    Margin="0,10,0,0">
+                <Expander Header="⚠  Versión en desarrollo — leer antes de usar"
+                          FontSize="11"
+                          FontWeight="SemiBold"
+                          Foreground="#92400E"
+                          IsExpanded="False">
+                    <TextBlock Margin="4,8,0,2"
+                               FontSize="11"
+                               Foreground="#78350F"
+                               TextWrapping="Wrap"
+                               LineHeight="18">
+Este software permite realizar backup y restauración de distintos componentes de Microsoft Fabric y Power BI.&#x0a;&#x0a;Se encuentra en fase de desarrollo, por lo que puede presentar errores o comportamientos no esperados. Ha sido construido con dedicación para aportar valor a la comunidad y su uso es completamente libre.&#x0a;&#x0a;Si detectás algún bug o inconveniente, por favor repórtalo a <Hyperlink NavigateUri="mailto:Walter@inegocios.cl" RequestNavigate="Hyperlink_RequestNavigate">Walter@inegocios.cl</Hyperlink> para poder corregirlo en futuras versiones.&#x0a;&#x0a;Gracias por colaborar en su mejora continua.
+                    </TextBlock>
+                </Expander>
+            </Border>
+
+        </Grid>
+    </Grid>
+</Window>
