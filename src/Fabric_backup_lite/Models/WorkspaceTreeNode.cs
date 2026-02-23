@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
+using Fabric_backup_lite.Services;
 
 namespace Fabric_backup_lite.Models;
 
@@ -22,6 +24,23 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
     private bool _isLoading;
     private bool? _isChecked = false;
 
+    public WorkspaceTreeNode()
+    {
+        // Subscribe to language changes via WPF's weak-event manager to avoid memory leaks.
+        // When the language switches, refresh the tooltip and (if applicable) the loading placeholder name.
+        PropertyChangedEventManager.AddHandler(
+            LocalizationService.Instance,
+            OnLocalizationChanged,
+            string.Empty);
+    }
+
+    private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(TooltipText));
+        if (IsLoadingPlaceholder)
+            Name = LocalizationService.Instance.LoadingPlaceholder;
+    }
+
     public string Name
     {
         get => _name;
@@ -34,6 +53,7 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
     public Workspace? Workspace { get; set; }
     public FabricItem? FabricItem { get; set; }
     public bool IsLoaded { get; set; }
+    public bool IsLoadingPlaceholder { get; set; }
 
     /// <summary>True for types Microsoft does not yet expose a getDefinition API for.</summary>
     public bool IsUnsupported { get; set; }
@@ -43,7 +63,7 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
 
     /// <summary>Shown as a tooltip on unsupported nodes; null for supported nodes.</summary>
     public string? TooltipText => IsUnsupported
-        ? "No disponible — Microsoft aún no expone una API de exportación para este tipo de ítem."
+        ? LocalizationService.Instance.UnsupportedTooltip
         : null;
 
     public bool? IsChecked
@@ -112,7 +132,13 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
             IsChecked = false,
             Children  = new ObservableCollection<WorkspaceTreeNode>
             {
-                CreatePlaceholder("Cargando...")
+                new()
+                {
+                    Name                = LocalizationService.Instance.LoadingPlaceholder,
+                    TypeIcon            = "⏳",
+                    NodeType            = WorkspaceNodeType.Placeholder,
+                    IsLoadingPlaceholder = true
+                }
             }
         };
 

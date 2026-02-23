@@ -3,11 +3,20 @@
 
   <Package Name="Fabric Backup Lite"
            Manufacturer="WeData"
-           Version="1.4.0"
+           Version="1.5.0"
            UpgradeCode="B7E4A3F1-2C6D-4E8B-9F5A-1D3C7B0E5A2F"
            Scope="perMachine">
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of Fabric Backup Lite is already installed." />
+    <!--
+      Schedule="afterInstallInitialize" → desinstala la versión anterior ANTES de copiar
+      los nuevos archivos (uninstall-first). Sin este atributo el comportamiento por defecto
+      es instalar primero y desinstalar después, lo que puede dejar residuos.
+      AllowSameVersionUpgrades="yes" → permite reinstalar el mismo número de versión
+      (útil durante desarrollo/testing sin tener que incrementar cada vez).
+    -->
+    <MajorUpgrade Schedule="afterInstallInitialize"
+                  AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="Ya hay instalada una versión más nueva de Fabric Backup Lite." />
 
     <MediaTemplate EmbedCab="yes" />
 

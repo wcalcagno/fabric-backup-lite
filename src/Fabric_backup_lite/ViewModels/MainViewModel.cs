@@ -16,6 +16,12 @@ public class MainViewModel : ViewModelBase
     private CancellationTokenSource? _cancellationTokenSource;
 
     // ------------------------------------------------------------------ //
+    //  Localization — expose singleton so XAML can bind to L.SomeProp    //
+    // ------------------------------------------------------------------ //
+
+    public LocalizationService L => LocalizationService.Instance;
+
+    // ------------------------------------------------------------------ //
     //  Properties                                                          //
     // ------------------------------------------------------------------ //
 
@@ -26,14 +32,14 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _isAuthenticated, value);
     }
 
-    private string _userDisplayName = "No autenticado";
+    private string _userDisplayName = LocalizationService.Instance.NotAuthenticated;
     public string UserDisplayName
     {
         get => _userDisplayName;
         set => SetProperty(ref _userDisplayName, value);
     }
 
-    private string _selectedItemsInfo = "0 ítems seleccionados";
+    private string _selectedItemsInfo = LocalizationService.Instance.ZeroItemsSelected;
     public string SelectedItemsInfo
     {
         get => _selectedItemsInfo;
@@ -90,7 +96,7 @@ public class MainViewModel : ViewModelBase
         set => SetProperty(ref _progressMaximum, value);
     }
 
-    private string _statusMessage = "Listo";
+    private string _statusMessage = LocalizationService.Instance.Ready;
     public string StatusMessage
     {
         get => _statusMessage;
@@ -121,6 +127,8 @@ public class MainViewModel : ViewModelBase
     public ICommand CancelCommand { get; }
     public ICommand SelectAllCommand { get; }
     public ICommand DeselectAllCommand { get; }
+    public ICommand SetLanguageEsCommand { get; }
+    public ICommand SetLanguageEnCommand { get; }
 
     // ------------------------------------------------------------------ //
     //  Constructor                                                         //
@@ -160,6 +168,19 @@ public class MainViewModel : ViewModelBase
         DeselectAllCommand = new RelayCommand(
             _ => SetAllChecked(false),
             _ => !IsBackupInProgress && IsAuthenticated);
+
+        SetLanguageEsCommand = new RelayCommand(_ => L.Language = "es");
+        SetLanguageEnCommand = new RelayCommand(_ => L.Language = "en");
+
+        // Refresh language-dependent properties when language changes
+        L.PropertyChanged += (_, _) =>
+        {
+            if (!IsAuthenticated)
+                UserDisplayName = L.NotAuthenticated;
+            if (!IsBackupInProgress)
+                StatusMessage = L.Ready;
+            RefreshSelectionInfo();
+        };
     }
 
     // ------------------------------------------------------------------ //
@@ -170,16 +191,16 @@ public class MainViewModel : ViewModelBase
     {
         try
         {
-            AddLog("Iniciando sesión...");
-            StatusMessage = "Iniciando sesión...";
+            AddLog(L.SigningIn);
+            StatusMessage = L.SigningIn;
 
             await _authService.SignInAsync();
 
             IsAuthenticated = true;
-            UserDisplayName = _authService.UserDisplayName ?? "Usuario desconocido";
+            UserDisplayName = _authService.UserDisplayName ?? L.UnknownUser;
 
-            AddLog($"Sesión iniciada como {UserDisplayName}");
-            AddLog("Cargando workspaces...");
+            AddLog(string.Format(L.SessionStartedAsFmt, UserDisplayName));
+            AddLog(L.LoadingWorkspaces);
 
             _workspaces = await _fabricClient.GetWorkspacesAsync();
 
@@ -187,8 +208,8 @@ public class MainViewModel : ViewModelBase
             foreach (var workspace in _workspaces)
                 WorkspaceTreeNodes.Add(WorkspaceTreeNode.CreateWorkspace(workspace));
 
-            AddLog($"Se encontraron {_workspaces.Count} workspace(s)");
-            StatusMessage = $"Autenticado — {_workspaces.Count} workspace(s) disponibles";
+            AddLog(string.Format(L.FoundWorkspacesFmt, _workspaces.Count));
+            StatusMessage = string.Format(L.AuthenticatedFmt, _workspaces.Count);
 
             ((RelayCommand)SelectAllCommand).RaiseCanExecuteChanged();
             ((RelayCommand)DeselectAllCommand).RaiseCanExecuteChanged();
@@ -196,9 +217,9 @@ public class MainViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Sign in failed");
-            AddLog($"Error: {ex.Message}");
-            StatusMessage = "Error al iniciar sesión";
-            MessageBox.Show($"No se pudo iniciar sesión: {ex.Message}", "Error",
+            AddLog(string.Format(L.ErrorFmt, ex.Message));
+            StatusMessage = L.SignInErrorStatus;
+            MessageBox.Show(string.Format(L.CouldNotSignInFmt, ex.Message), L.BackupErrorTitle,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -253,7 +274,7 @@ public class MainViewModel : ViewModelBase
             {
                 node.Children.Add(new WorkspaceTreeNode
                 {
-                    Name     = "Sin elementos",
+                    Name     = L.NoItems,
                     TypeIcon = "ℹ️",
                     NodeType = WorkspaceNodeType.Placeholder
                 });
@@ -268,7 +289,7 @@ public class MainViewModel : ViewModelBase
             node.Name = $"{node.Workspace.Name} ({totalItems})";
 
             node.IsLoaded = true;
-            AddLog($"Cargados {items.Count} ítem(s) en '{node.Workspace.Name}'");
+            AddLog(string.Format(L.LoadedItemsFmt, items.Count, node.Workspace.Name));
             RefreshSelectionInfo();
         }
         catch (Exception ex)
@@ -277,7 +298,7 @@ public class MainViewModel : ViewModelBase
             node.Children.Clear();
             node.Children.Add(new WorkspaceTreeNode
             {
-                Name     = $"Error: {ex.Message}",
+                Name     = string.Format(L.ErrorFmt, ex.Message),
                 TypeIcon = "❌",
                 NodeType = WorkspaceNodeType.Placeholder
             });
@@ -299,10 +320,10 @@ public class MainViewModel : ViewModelBase
         int ws       = checked_.Select(i => i.workspaceId).Distinct().Count();
 
         SelectedItemsInfo = count == 0
-            ? "0 ítems seleccionados"
+            ? L.ZeroItemsSelected
             : ws == 1
-                ? $"{count} ítem(s) seleccionado(s)"
-                : $"{count} ítem(s) en {ws} workspace(s)";
+                ? string.Format(L.ItemsSelectedSingleFmt, count)
+                : string.Format(L.ItemsSelectedMultiFmt, count, ws);
 
         ((AsyncRelayCommand)StartBackupCommand).RaiseCanExecuteChanged();
     }
@@ -353,7 +374,7 @@ public class MainViewModel : ViewModelBase
     {
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Title           = "Seleccioná la carpeta de destino",
+            Title           = L.SelectDestinationTitle,
             FileName        = "SelectFolder",
             Filter          = "Folder|*.folder",
             CheckFileExists = false,
@@ -363,8 +384,8 @@ public class MainViewModel : ViewModelBase
         if (dialog.ShowDialog() == true)
         {
             DestinationPath = System.IO.Path.GetDirectoryName(dialog.FileName) ?? string.Empty;
-            AddLog($"Destino: {DestinationPath}");
-            StatusMessage = "Carpeta de destino seleccionada";
+            AddLog(string.Format(L.DestinationFmt, DestinationPath));
+            StatusMessage = L.DestinationFolderSelectedSt;
         }
     }
 
@@ -379,8 +400,8 @@ public class MainViewModel : ViewModelBase
         if (checkedItems.Count == 0)
         {
             MessageBox.Show(
-                "Seleccioná al menos un ítem en el árbol de workspaces para hacer backup.",
-                "Sin ítems seleccionados",
+                L.SelectAtLeastOneMsg,
+                L.NoItemsSelectedTitle,
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return;
@@ -392,8 +413,8 @@ public class MainViewModel : ViewModelBase
 
         try
         {
-            AddLog($"Iniciando backup de {checkedItems.Count} ítem(s)...");
-            StatusMessage = "Backup en progreso...";
+            AddLog(string.Format(L.StartingBackupFmt, checkedItems.Count));
+            StatusMessage = L.BackupInProgress;
 
             var progress = new Progress<BackupProgress>(p =>
             {
@@ -411,46 +432,46 @@ public class MainViewModel : ViewModelBase
 
             if (result.Success)
             {
-                AddLog("✓ Backup completado exitosamente!");
-                AddLog($"  Ítems guardados: {result.ItemsBackedUp}");
-                AddLog($"  Ubicación: {result.BackupPath}");
-                StatusMessage = "Backup completado";
+                AddLog(L.BackupCompletedLog);
+                AddLog(string.Format(L.ItemsSavedFmt, result.ItemsBackedUp));
+                AddLog(string.Format(L.LocationFmt, result.BackupPath));
+                StatusMessage = L.BackupCompletedStatus;
 
                 MessageBox.Show(
-                    $"Backup completado exitosamente!\n\nÍtems guardados: {result.ItemsBackedUp}\nUbicación: {result.BackupPath}",
-                    "Backup completo",
+                    string.Format(L.BackupCompletedMsgFmt, result.ItemsBackedUp, result.BackupPath),
+                    L.BackupCompleteTitle,
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             else
             {
-                AddLog("⚠ Backup completado con errores:");
-                AddLog($"  Ítems guardados: {result.ItemsBackedUp}");
+                AddLog(L.BackupWithErrorsLog);
+                AddLog(string.Format(L.ItemsSavedFmt, result.ItemsBackedUp));
                 foreach (var error in result.Errors)
                     AddLog($"    - {error}");
 
-                StatusMessage = $"Backup con {result.Errors.Count} error(es)";
+                StatusMessage = string.Format(L.BackupWithErrorsStatusFmt, result.Errors.Count);
 
                 MessageBox.Show(
-                    $"Backup completado con errores.\n\nÍtems guardados: {result.ItemsBackedUp}\nErrores: {result.Errors.Count}\n\nRevisá el log para más detalles.",
-                    "Backup con errores",
+                    string.Format(L.BackupWithErrorsMsgFmt, result.ItemsBackedUp, result.Errors.Count),
+                    L.BackupWithErrorsTitle,
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
         }
         catch (OperationCanceledException)
         {
-            AddLog("Backup cancelado por el usuario");
-            StatusMessage = "Backup cancelado";
-            MessageBox.Show("El backup fue cancelado.", "Cancelado",
+            AddLog(L.BackupCancelledLog);
+            StatusMessage = L.BackupCancelledStatus;
+            MessageBox.Show(L.BackupCancelledMsg, L.BackupCancelledTitle,
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Backup failed");
-            AddLog($"✗ Error en el backup: {ex.Message}");
-            StatusMessage = "Error en el backup";
-            MessageBox.Show($"Error en el backup: {ex.Message}", "Error",
+            AddLog(string.Format(L.BackupErrorFmt, ex.Message));
+            StatusMessage = L.BackupErrorStatus;
+            MessageBox.Show(string.Format(L.BackupErrorMsgFmt, ex.Message), L.BackupErrorTitle,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
@@ -465,8 +486,8 @@ public class MainViewModel : ViewModelBase
     private void CancelBackup()
     {
         _cancellationTokenSource?.Cancel();
-        AddLog("Cancelando backup...");
-        StatusMessage = "Cancelando...";
+        AddLog(L.CancellingBackupLog);
+        StatusMessage = L.CancellingStatus;
     }
 
     private bool CanStartBackup()

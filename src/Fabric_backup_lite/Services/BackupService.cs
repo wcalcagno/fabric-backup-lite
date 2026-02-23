@@ -13,6 +13,8 @@ public class BackupService : IBackupService
     private readonly ILogger<BackupService> _logger;
     private readonly HashSet<FabricItemType> _supportedTypes;
 
+    private static LocalizationService L => LocalizationService.Instance;
+
     public BackupService(
         IFabricApiClient fabricClient,
         IAuthenticationService authService,
@@ -202,7 +204,7 @@ public class BackupService : IBackupService
             return new BackupResult
             {
                 Success = false,
-                Errors  = { "No hay ítems seleccionados para hacer backup." }
+                Errors  = { L.NoItemsForBackup }
             };
         }
 
@@ -211,7 +213,7 @@ public class BackupService : IBackupService
         int total    = selectedItems.Count(i => _supportedTypes.Contains(i.item.Type));
         int completed = 0;
 
-        ReportProgress(progress, total, 0, "", $"Iniciando backup de {total} ítem(s)...");
+        ReportProgress(progress, total, 0, "", string.Format(L.StartingBackupFmt, total));
 
         // Agrupar por workspace
         var byWorkspace = selectedItems
@@ -232,14 +234,14 @@ public class BackupService : IBackupService
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    result.Errors.Add("Backup cancelado por el usuario.");
+                    result.Errors.Add(L.BackupCancelledSvcMsg);
                     break;
                 }
 
                 try
                 {
                     ReportProgress(progress, total, completed, item.DisplayName,
-                        $"Guardando {item.Type}: {item.DisplayName}");
+                        string.Format(L.SavingItemFmt, item.Type, item.DisplayName));
 
                     var parts = await _fabricClient.GetItemDefinitionAsync(
                         workspaceId, item.Id, item.Type, cancellationToken);
@@ -265,7 +267,7 @@ public class BackupService : IBackupService
                 }
                 catch (Exception ex)
                 {
-                    var err = $"Error al guardar {item.DisplayName}: {ex.Message}";
+                    var err = string.Format(L.ErrorSavingItemFmt, item.DisplayName, ex.Message);
                     _logger.LogError(ex, err);
                     result.Errors.Add(err);
                     completed++;
@@ -287,8 +289,8 @@ public class BackupService : IBackupService
         result.Success = result.Errors.Count == 0;
 
         var finalMsg = result.Success
-            ? $"Backup completado: {result.ItemsBackedUp} ítem(s) guardado(s)."
-            : $"Backup con errores: {result.ItemsBackedUp} guardado(s), {result.Errors.Count} error(es).";
+            ? string.Format(L.BackupCompletedSvcFmt, result.ItemsBackedUp)
+            : string.Format(L.BackupWithErrorsSvcFmt, result.ItemsBackedUp, result.Errors.Count);
 
         ReportProgress(progress, total, total, "", finalMsg);
         _logger.LogInformation("BackupSelectedItems finished: {Success}, Items: {Count}", result.Success, result.ItemsBackedUp);

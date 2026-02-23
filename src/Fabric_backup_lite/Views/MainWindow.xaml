@@ -93,6 +93,22 @@
             </Setter>
         </Style>
 
+        <!-- Language button: active state -->
+        <Style x:Key="LangButtonActive" TargetType="Button" BasedOn="{StaticResource SmallButton}">
+            <Setter Property="Background"  Value="White"/>
+            <Setter Property="Foreground"  Value="#0B5394"/>
+            <Setter Property="FontWeight"  Value="Bold"/>
+            <Setter Property="Padding"     Value="10,4"/>
+        </Style>
+
+        <!-- Language button: inactive state -->
+        <Style x:Key="LangButtonInactive" TargetType="Button" BasedOn="{StaticResource SmallButton}">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="#A8C8E8"/>
+            <Setter Property="FontWeight"  Value="Normal"/>
+            <Setter Property="Padding"     Value="10,4"/>
+        </Style>
+
     </Window.Resources>
 
     <!-- ================================================================ -->
@@ -128,7 +144,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0"
-                                   Text="EXPLORADOR"
+                                   Text="{Binding L.ExplorerHeader}"
                                    Foreground="White"
                                    FontSize="11"
                                    FontWeight="Bold"
@@ -149,13 +165,13 @@
                         BorderThickness="0,0,0,1"
                         Padding="10,8">
                     <StackPanel Orientation="Horizontal">
-                        <Button Content="✓ Todo"
+                        <Button Content="{Binding L.SelectAllButton}"
                                 Command="{Binding SelectAllCommand}"
                                 Style="{StaticResource SmallButton}"
                                 Background="#E8F4EA"
                                 Foreground="#2D6A4F"
                                 Margin="0,0,6,0"/>
-                        <Button Content="✗ Ninguno"
+                        <Button Content="{Binding L.SelectNoneButton}"
                                 Command="{Binding DeselectAllCommand}"
                                 Style="{StaticResource SmallButton}"
                                 Background="#FDE8E8"
@@ -242,9 +258,9 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            
+
             <!-- Row 0: Header / Autenticación                            -->
-            
+
             <Border Grid.Row="0"
                     Background="{StaticResource PrimaryBrush}"
                     CornerRadius="10"
@@ -254,8 +270,10 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
+                    <!-- App title + user -->
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="Microsoft Fabric Backup Lite"
                                    FontSize="19" FontWeight="Bold"
@@ -265,19 +283,104 @@
                                    Margin="0,4,0,0"/>
                     </StackPanel>
 
+                    <!-- Sign In button -->
                     <Button Grid.Column="1"
-                            Content="Iniciar sesión"
+                            Content="{Binding L.SignInButton}"
                             Command="{Binding SignInCommand}"
                             Style="{StaticResource PrimaryButton}"
                             Background="#1F6DB5"
                             Foreground="White"
-                            Width="130"/>
+                            Width="130"
+                            Margin="0,0,10,0"/>
+
+                    <!-- Language selector: ES | EN -->
+                    <Border Grid.Column="2"
+                            BorderBrush="#4A90C4"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- ES button -->
+                            <Button Command="{Binding SetLanguageEsCommand}"
+                                    Content="ES"
+                                    FontSize="12"
+                                    FontWeight="Bold"
+                                    Width="38"
+                                    Height="32"
+                                    Cursor="Hand"
+                                    BorderThickness="0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background"  Value="Transparent"/>
+                                        <Setter Property="Foreground"  Value="#A8C8E8"/>
+                                        <Setter Property="FontWeight"  Value="Normal"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="5,0,0,5"
+                                                            Padding="4,4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding L.IsSpanish}" Value="True">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="Foreground" Value="#0B5394"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <!-- Separator -->
+                            <Border Width="1" Background="#4A90C4" VerticalAlignment="Stretch" Margin="0"/>
+                            <!-- EN button -->
+                            <Button Command="{Binding SetLanguageEnCommand}"
+                                    Content="EN"
+                                    FontSize="12"
+                                    FontWeight="Bold"
+                                    Width="38"
+                                    Height="32"
+                                    Cursor="Hand"
+                                    BorderThickness="0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Background"  Value="Transparent"/>
+                                        <Setter Property="Foreground"  Value="#A8C8E8"/>
+                                        <Setter Property="FontWeight"  Value="Normal"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="0,5,5,0"
+                                                            Padding="4,4">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding L.IsSpanish}" Value="False">
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="Foreground" Value="#0B5394"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
                 </Grid>
             </Border>
 
-            
+
             <!-- Row 1: Carpeta de destino                                -->
-            
+
             <Border Grid.Row="1"
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderBrush_}"
@@ -297,7 +400,7 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="Carpeta de destino"
+                        <TextBlock Text="{Binding L.DestinationFolderLabel}"
                                    FontSize="11"
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource TextMutedBrush}"
@@ -312,7 +415,7 @@
                     </StackPanel>
 
                     <Button Grid.Column="2"
-                            Content="Examinar..."
+                            Content="{Binding L.BrowseButton}"
                             Command="{Binding SelectDestinationCommand}"
                             Style="{StaticResource SmallButton}"
                             Background="#EEF2FF"
@@ -322,9 +425,9 @@
                 </Grid>
             </Border>
 
-            
+
             <!-- Row 2: Log                                               -->
-            
+
             <Border Grid.Row="2"
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderBrush_}"
@@ -339,7 +442,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0"
-                               Text="Log de actividad"
+                               Text="{Binding L.ActivityLogLabel}"
                                FontSize="11"
                                FontWeight="SemiBold"
                                Foreground="{StaticResource TextMutedBrush}"
@@ -364,9 +467,9 @@
                 </Grid>
             </Border>
 
-            
+
             <!-- Row 3: Barra de progreso                                  -->
-            
+
             <Border Grid.Row="3"
                     Background="{StaticResource SurfaceBrush}"
                     BorderBrush="{StaticResource BorderBrush_}"
@@ -397,9 +500,9 @@
                 </Grid>
             </Border>
 
-            
+
             <!-- Row 4: Botones de acción                                  -->
-            
+
             <Grid Grid.Row="4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -414,7 +517,7 @@
                            Foreground="{StaticResource TextMutedBrush}"/>
 
                 <Button Grid.Column="1"
-                        Content="▶  Iniciar Backup"
+                        Content="{Binding L.StartBackupButton}"
                         Command="{Binding StartBackupCommand}"
                         Style="{StaticResource PrimaryButton}"
                         Background="#16A34A"
@@ -423,7 +526,7 @@
                         Margin="0,0,8,0"/>
 
                 <Button Grid.Column="2"
-                        Content="✕  Cancelar"
+                        Content="{Binding L.CancelButton}"
                         Command="{Binding CancelCommand}"
                         Style="{StaticResource PrimaryButton}"
                         Background="#DC2626"
@@ -440,7 +543,7 @@
                     CornerRadius="8"
                     Padding="14,10"
                     Margin="0,10,0,0">
-                <Expander Header="⚠  Versión en desarrollo — leer antes de usar"
+                <Expander Header="{Binding L.BetaWarningHeader}"
                           FontSize="11"
                           FontWeight="SemiBold"
                           Foreground="#92400E"
@@ -450,7 +553,7 @@
                                Foreground="#78350F"
                                TextWrapping="Wrap"
                                LineHeight="18">
-Este software permite realizar backup y restauración de distintos componentes de Microsoft Fabric y Power BI.&#x0a;&#x0a;Se encuentra en fase de desarrollo, por lo que puede presentar errores o comportamientos no esperados. Ha sido construido con dedicación para aportar valor a la comunidad y su uso es completamente libre.&#x0a;&#x0a;Si detectás algún bug o inconveniente, por favor repórtalo a <Hyperlink NavigateUri="mailto:Walter@inegocios.cl" RequestNavigate="Hyperlink_RequestNavigate">Walter@inegocios.cl</Hyperlink> para poder corregirlo en futuras versiones.&#x0a;&#x0a;Gracias por colaborar en su mejora continua.
+                        <Run Text="{Binding L.BetaWarningText1, Mode=OneWay}"/><Hyperlink NavigateUri="mailto:Walter@inegocios.cl" RequestNavigate="Hyperlink_RequestNavigate">Walter@inegocios.cl</Hyperlink><Run Text="{Binding L.BetaWarningText2, Mode=OneWay}"/>
                     </TextBlock>
                 </Expander>
             </Border>
