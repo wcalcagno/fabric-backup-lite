@@ -29,6 +29,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public void ToggleLanguage() => Language = IsSpanish ? "en" : "es";
 
+    // ---- App tagline (header) ----
+    public string AppTagline => IsSpanish
+        ? "Software libre desarrollado por Walter Calcagno Lucares, Microsoft MVP Data Platform en Santiago de Chile — MMXXVI"
+        : "Free software developed by Walter Calcagno Lucares, Microsoft MVP Data Platform in Santiago, Chile — MMXXVI";
+
     // ---- Language selector ----
     public string LanguageButtonText => IsSpanish ? "EN" : "ES";
 
@@ -67,8 +72,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
           "If you find a bug or issue, please report it to ";
 
     public string BetaWarningText2 => IsSpanish
-        ? " para poder corregirlo en futuras versiones.\n\nGracias por colaborar en su mejora continua."
-        : " so it can be fixed in future versions.\n\nThank you for contributing to its continuous improvement.";
+        ? " para poder corregirlo en futuras versiones.\n\nGracias por colaborar en su mejora continua.\n\n" +
+          "Software libre desarrollado por Walter Calcagno Lucares, Microsoft MVP Data Platform en Santiago de Chile — MMXXVI"
+        : " so it can be fixed in future versions.\n\nThank you for contributing to its continuous improvement.\n\n" +
+          "Free software developed by Walter Calcagno Lucares, Microsoft MVP Data Platform in Santiago, Chile — MMXXVI";
 
     // ---- ViewModel: authentication ----
     public string NotAuthenticated    => IsSpanish ? "No autenticado"                   : "Not authenticated";
@@ -136,6 +143,22 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string BackupErrorStatus => IsSpanish ? "Error en el backup"        : "Backup error";
     public string BackupErrorMsgFmt => IsSpanish ? "Error en el backup: {0}"  : "Backup error: {0}";
     public string BackupErrorTitle  => IsSpanish ? "Error"                     : "Error";
+
+    // ---- Settings window ----
+    public string SettingsTitle       => IsSpanish ? "Configuración"                   : "Settings";
+    public string SettingsSubtitle    => IsSpanish ? "Microsoft Fabric Backup Lite"    : "Microsoft Fabric Backup Lite";
+    public string SettingsAuthSection => IsSpanish ? "Autenticación Azure AD"          : "Azure AD Authentication";
+    public string ClientIdLabel       => IsSpanish ? "Client ID (App ID):"             : "Client ID (App ID):";
+    public string TenantIdLabel       => IsSpanish ? "Tenant ID:"                      : "Tenant ID:";
+    public string SaveSettingsButton  => IsSpanish ? "Guardar"                         : "Save";
+    public string CloseSettingsButton => IsSpanish ? "Cerrar"                          : "Close";
+    public string SettingsHint        => IsSpanish
+        ? "Los cambios se guardan en AppData\\WeData\\FabricBackupLite\\usersettings.json y se aplican al reiniciar la aplicación."
+        : "Changes are saved to AppData\\WeData\\FabricBackupLite\\usersettings.json and apply on next application restart.";
+    public string SettingsSavedMsg    => IsSpanish
+        ? "Configuración guardada correctamente.\n\nReinicie la aplicación para aplicar los cambios."
+        : "Settings saved successfully.\n\nPlease restart the application to apply the changes.";
+    public string SettingsSavedTitle  => IsSpanish ? "Guardado"                        : "Saved";
 
     // ---- WorkspaceTreeNode ----
     public string LoadingPlaceholder => IsSpanish ? "Cargando..." : "Loading...";

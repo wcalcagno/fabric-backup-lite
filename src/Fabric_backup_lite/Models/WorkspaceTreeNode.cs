@@ -175,7 +175,7 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
         };
 
     private static bool ItemTypeIsUnsupported(FabricItemType type) =>
-        type is FabricItemType.Lakehouse or FabricItemType.Warehouse or FabricItemType.KQLDatabase or FabricItemType.Unknown;
+        type is FabricItemType.Unknown;
 
     public static WorkspaceTreeNode CreateItemTypeGroup(FabricItemType type, WorkspaceTreeNode parent, int count)
         => new()
@@ -192,15 +192,18 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
 
     private static string GetTypePluralName(FabricItemType type) => type switch
     {
-        FabricItemType.Report        => "Reports",
-        FabricItemType.SemanticModel => "Semantic Models",
-        FabricItemType.Notebook      => "Notebooks",
-        FabricItemType.DataPipeline  => "Data Pipelines",
-        FabricItemType.Dataflow      => "Dataflows",
-        FabricItemType.Lakehouse     => "Lakehouses",
-        FabricItemType.Warehouse     => "Warehouses",
-        FabricItemType.KQLDatabase   => "KQL Databases",
-        _                            => "Other"
+        FabricItemType.Report             => "Reports",
+        FabricItemType.SemanticModel      => "Semantic Models",
+        FabricItemType.Notebook           => "Notebooks",
+        FabricItemType.DataPipeline       => "Data Pipelines",
+        FabricItemType.Dataflow           => "Dataflows",
+        FabricItemType.Lakehouse          => "Lakehouses",
+        FabricItemType.Warehouse          => "Warehouses",
+        FabricItemType.KQLDatabase        => "KQL Databases",
+        FabricItemType.Eventhouse         => "Eventhouses",
+        FabricItemType.Environment        => "Environments",
+        FabricItemType.SparkJobDefinition => "Spark Job Definitions",
+        _                                 => "Other"
     };
 
     public static WorkspaceTreeNode CreateItem(FabricItem item, WorkspaceTreeNode parent)
@@ -221,14 +224,17 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
 
     private static string GetItemIcon(FabricItemType type) => type switch
     {
-        FabricItemType.Report        => "📈",
-        FabricItemType.SemanticModel => "🔷",
-        FabricItemType.Notebook      => "📓",
-        FabricItemType.DataPipeline  => "🔄",
-        FabricItemType.Dataflow      => "💧",
-        FabricItemType.Lakehouse     => "🏠",
-        FabricItemType.Warehouse     => "🏭",
-        FabricItemType.KQLDatabase   => "🔍",
-        _                            => "📄"
+        FabricItemType.Report             => "📈",
+        FabricItemType.SemanticModel      => "🔷",
+        FabricItemType.Notebook           => "📓",
+        FabricItemType.DataPipeline       => "🔄",
+        FabricItemType.Dataflow           => "💧",
+        FabricItemType.Lakehouse          => "🏠",
+        FabricItemType.Warehouse          => "🏭",
+        FabricItemType.KQLDatabase        => "🔍",
+        FabricItemType.Eventhouse         => "⚡",
+        FabricItemType.Environment        => "🌐",
+        FabricItemType.SparkJobDefinition => "✨",
+        _                                 => "📄"
     };
 }

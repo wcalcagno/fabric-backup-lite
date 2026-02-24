@@ -117,8 +117,14 @@ public class FabricApiClient : IFabricApiClient
                 $"El tipo '{itemType}' no tiene endpoint de exportación en la API de Fabric.");
 
         // Notebooks require ?format=ipynb to get a standard Jupyter file.
+        // Lakehouses require ?format=LakehouseDefinitionV1 (otherwise returns 400).
         // Reports use PBIR format (multiple JSON parts) by default — no format param needed.
-        var formatQuery = itemType == FabricItemType.Notebook ? "?format=ipynb" : string.Empty;
+        var formatQuery = itemType switch
+        {
+            FabricItemType.Notebook  => "?format=ipynb",
+            FabricItemType.Lakehouse => "?format=LakehouseDefinitionV1",
+            _                        => string.Empty
+        };
         var url = $"workspaces/{workspaceId}/{typeSegment}/{itemId}/getDefinition{formatQuery}";
         _logger.LogInformation("Getting definition for item {ItemId} ({Type}) via {Url}", itemId, itemType, url);
 
@@ -133,7 +139,10 @@ public class FabricApiClient : IFabricApiClient
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogError("GetDefinition failed: {StatusCode} - {Content}",
                 response.StatusCode, errorContent);
-            throw new HttpRequestException($"GetDefinition failed: {response.StatusCode}");
+            // Include the response body so it's visible in the UI log and helps diagnosis.
+            var snippet = errorContent.Length > 400 ? errorContent[..400] : errorContent;
+            throw new HttpRequestException(
+                $"GetDefinition failed ({(int)response.StatusCode} {response.StatusCode}): {snippet}");
         }
 
         // Respuesta inmediata (200 OK sin LRO)
@@ -226,12 +235,17 @@ public class FabricApiClient : IFabricApiClient
     // Returns null for types that do not expose a getDefinition endpoint.
     private static string? GetTypeSegment(FabricItemType type) => type switch
     {
-        FabricItemType.Notebook      => "notebooks",
-        FabricItemType.DataPipeline  => "dataPipelines",
-        FabricItemType.Report        => "reports",
-        FabricItemType.SemanticModel => "semanticModels",
-        FabricItemType.Dataflow      => "dataflows",
-        _                            => null   // Lakehouse, Warehouse, KQLDatabase, Unknown
+        FabricItemType.Notebook          => "notebooks",
+        FabricItemType.DataPipeline      => "dataPipelines",
+        FabricItemType.Report            => "reports",
+        FabricItemType.SemanticModel     => "semanticModels",
+        FabricItemType.Dataflow          => "dataflows",
+        FabricItemType.Lakehouse         => "lakehouses",
+        FabricItemType.KQLDatabase       => "kqldatabases",
+        FabricItemType.Eventhouse        => "eventhouses",
+        FabricItemType.Environment       => "environments",
+        FabricItemType.SparkJobDefinition => "sparkJobDefinitions",
+        _                                => null   // Warehouse, Unknown
     };
 
     // Returns one entry per definition part: (decoded bytes, relative path as declared by the API).
@@ -269,27 +283,35 @@ public class FabricApiClient : IFabricApiClient
 
     private static string GetDefaultExtension(FabricItemType itemType) => itemType switch
     {
-        FabricItemType.Report        => ".json",
-        FabricItemType.SemanticModel => ".bim",
-        FabricItemType.Notebook      => ".ipynb",
-        FabricItemType.DataPipeline  => ".json",
-        FabricItemType.Dataflow      => ".json",
-        _                            => ".json"
+        FabricItemType.Report            => ".json",
+        FabricItemType.SemanticModel     => ".bim",
+        FabricItemType.Notebook          => ".ipynb",
+        FabricItemType.DataPipeline      => ".json",
+        FabricItemType.Dataflow          => ".json",
+        FabricItemType.Lakehouse         => ".json",
+        FabricItemType.KQLDatabase       => ".json",
+        FabricItemType.Eventhouse        => ".json",
+        FabricItemType.Environment       => ".json",
+        FabricItemType.SparkJobDefinition => ".json",
+        _                                => ".json"
     };
 
     private FabricItemType ParseItemType(string type)
     {
         return type?.ToLowerInvariant() switch
         {
-            "report" => FabricItemType.Report,
-            "semanticmodel" => FabricItemType.SemanticModel,
-            "notebook" => FabricItemType.Notebook,
-            "datapipeline" => FabricItemType.DataPipeline,
-            "dataflow" => FabricItemType.Dataflow,
-            "lakehouse" => FabricItemType.Lakehouse,
-            "warehouse" => FabricItemType.Warehouse,
-            "kqldatabase" => FabricItemType.KQLDatabase,
-            _ => FabricItemType.Unknown
+            "report"             => FabricItemType.Report,
+            "semanticmodel"      => FabricItemType.SemanticModel,
+            "notebook"           => FabricItemType.Notebook,
+            "datapipeline"       => FabricItemType.DataPipeline,
+            "dataflow"           => FabricItemType.Dataflow,
+            "lakehouse"          => FabricItemType.Lakehouse,
+            "warehouse"          => FabricItemType.Warehouse,
+            "kqldatabase"        => FabricItemType.KQLDatabase,
+            "eventhouse"         => FabricItemType.Eventhouse,
+            "environment"        => FabricItemType.Environment,
+            "sparkjobdefinition" => FabricItemType.SparkJobDefinition,
+            _                    => FabricItemType.Unknown
         };
     }
 

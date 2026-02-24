@@ -10,6 +10,8 @@ public class BackupService : IBackupService
     private readonly IFabricApiClient _fabricClient;
     private readonly IAuthenticationService _authService;
     private readonly FileSystemService _fileSystem;
+    private readonly IOneLakeDownloadService _oneLakeDownload;
+    private readonly IFabCliService _fabCli;
     private readonly ILogger<BackupService> _logger;
     private readonly HashSet<FabricItemType> _supportedTypes;
 
@@ -19,13 +21,17 @@ public class BackupService : IBackupService
         IFabricApiClient fabricClient,
         IAuthenticationService authService,
         FileSystemService fileSystemService,
+        IOneLakeDownloadService oneLakeDownloadService,
+        IFabCliService fabCliService,
         IConfiguration configuration,
         ILogger<BackupService> logger)
     {
-        _fabricClient = fabricClient;
-        _authService = authService;
-        _fileSystem = fileSystemService;
-        _logger = logger;
+        _fabricClient    = fabricClient;
+        _authService     = authService;
+        _fileSystem      = fileSystemService;
+        _oneLakeDownload = oneLakeDownloadService;
+        _fabCli          = fabCliService;
+        _logger          = logger;
 
         // Cargar tipos soportados de configuración
         var supportedTypesConfig = configuration.GetSection("Backup:SupportedItemTypes").Get<string[]>()
@@ -114,21 +120,32 @@ public class BackupService : IBackupService
                         item.DisplayName,
                         $"Backing up {item.Type}: {item.DisplayName}");
 
-                    // Obtener definición del item
-                    var parts = await _fabricClient.GetItemDefinitionAsync(
-                        workspaceId,
-                        item.Id,
-                        item.Type,
-                        cancellationToken);
+                    string relativePath;
 
-                    // Guardar a disco
-                    var relativePath = await _fileSystem.SaveItemDefinitionAsync(
-                        backupPath,
-                        item,
-                        parts,
-                        cancellationToken);
+                    if (_oneLakeDownload.RequiresOneLakeDownload(item.Type))
+                    {
+                        // Items without a getDefinition API → download data files from OneLake
+                        var oneLakeProgress = new Progress<string>(msg =>
+                            ReportProgress(progress, itemsToBackup.Count, i, item.DisplayName, msg));
 
-                    // Agregar al manifest
+                        var fileCount = await _oneLakeDownload.DownloadItemAsync(
+                            workspaceId, item, backupPath, oneLakeProgress, cancellationToken);
+
+                        relativePath = $"Warehouses/{_fileSystem.SanitizeFileName(item.DisplayName)}_*";
+                        _logger.LogInformation(
+                            "OneLake download complete for {ItemName}: {Count} files",
+                            item.DisplayName, fileCount);
+                    }
+                    else
+                    {
+                        // Items with getDefinition API → standard path
+                        var parts = await _fabricClient.GetItemDefinitionAsync(
+                            workspaceId, item.Id, item.Type, cancellationToken);
+
+                        relativePath = await _fileSystem.SaveItemDefinitionAsync(
+                            backupPath, item, parts, cancellationToken);
+                    }
+
                     backupItems.Add(new BackupItemInfo
                     {
                         Type = item.Type.ToString(),
@@ -138,14 +155,41 @@ public class BackupService : IBackupService
                     });
 
                     result.ItemsBackedUp++;
-
                     _logger.LogInformation("Successfully backed up {ItemName}", item.DisplayName);
                 }
                 catch (NotSupportedException ex)
                 {
-                    _logger.LogWarning("Tipo no soportado, omitiendo {Item}: {Msg}", item.DisplayName, ex.Message);
-                    ReportProgress(progress, itemsToBackup.Count, i + 1, item.DisplayName,
-                        $"Omitido (tipo no soportado): {item.Type}");
+                    _logger.LogWarning(
+                        "No getDefinition for {Item} ({Type}): {Msg}. Trying Fab CLI...",
+                        item.DisplayName, item.Type, ex.Message);
+
+                    ReportProgress(progress, itemsToBackup.Count, i, item.DisplayName,
+                        $"API unavailable for {item.Type}, trying Fab CLI...");
+
+                    var fabDir        = Path.Combine(backupPath, _fileSystem.GetSubFolderForType(item.Type));
+                    var exportedPath  = await _fabCli.ExportItemAsync(
+                        workspace.Name, item.DisplayName, item.Type.ToString(), fabDir, cancellationToken);
+
+                    if (exportedPath != null)
+                    {
+                        var relPath = Path.GetRelativePath(backupPath, exportedPath);
+                        backupItems.Add(new BackupItemInfo
+                        {
+                            Type         = item.Type.ToString(),
+                            Id           = item.Id,
+                            Name         = item.DisplayName,
+                            RelativePath = relPath
+                        });
+                        result.ItemsBackedUp++;
+                        _logger.LogInformation("Fab CLI export succeeded for {Item}", item.DisplayName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Skipped {Item} — no supported backup method for {Type}",
+                            item.DisplayName, item.Type);
+                        ReportProgress(progress, itemsToBackup.Count, i + 1, item.DisplayName,
+                            $"Skipped (no backup method available): {item.Type}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -243,10 +287,29 @@ public class BackupService : IBackupService
                     ReportProgress(progress, total, completed, item.DisplayName,
                         string.Format(L.SavingItemFmt, item.Type, item.DisplayName));
 
-                    var parts = await _fabricClient.GetItemDefinitionAsync(
-                        workspaceId, item.Id, item.Type, cancellationToken);
+                    string relativePath;
 
-                    var relativePath = await _fileSystem.SaveItemDefinitionAsync(backupPath, item, parts, cancellationToken);
+                    if (_oneLakeDownload.RequiresOneLakeDownload(item.Type))
+                    {
+                        var oneLakeProgress = new Progress<string>(msg =>
+                            ReportProgress(progress, total, completed, item.DisplayName, msg));
+
+                        var fileCount = await _oneLakeDownload.DownloadItemAsync(
+                            workspaceId, item, backupPath, oneLakeProgress, cancellationToken);
+
+                        relativePath = $"Warehouses/{_fileSystem.SanitizeFileName(item.DisplayName)}_*";
+                        _logger.LogInformation(
+                            "OneLake download complete for {ItemName}: {Count} files",
+                            item.DisplayName, fileCount);
+                    }
+                    else
+                    {
+                        var parts = await _fabricClient.GetItemDefinitionAsync(
+                            workspaceId, item.Id, item.Type, cancellationToken);
+
+                        relativePath = await _fileSystem.SaveItemDefinitionAsync(
+                            backupPath, item, parts, cancellationToken);
+                    }
 
                     backupItems.Add(new BackupItemInfo
                     {
@@ -262,7 +325,33 @@ public class BackupService : IBackupService
                 }
                 catch (NotSupportedException ex)
                 {
-                    _logger.LogWarning("Tipo no soportado, omitiendo {Item}: {Msg}", item.DisplayName, ex.Message);
+                    _logger.LogWarning(
+                        "No getDefinition for {Item} ({Type}): {Msg}. Trying Fab CLI...",
+                        item.DisplayName, item.Type, ex.Message);
+
+                    var fabDir       = Path.Combine(backupPath, _fileSystem.GetSubFolderForType(item.Type));
+                    var exportedPath = await _fabCli.ExportItemAsync(
+                        workspaceName, item.DisplayName, item.Type.ToString(), fabDir, cancellationToken);
+
+                    if (exportedPath != null)
+                    {
+                        var relPath = Path.GetRelativePath(backupPath, exportedPath);
+                        backupItems.Add(new BackupItemInfo
+                        {
+                            Type         = item.Type.ToString(),
+                            Id           = item.Id,
+                            Name         = item.DisplayName,
+                            RelativePath = relPath
+                        });
+                        result.ItemsBackedUp++;
+                        _logger.LogInformation("Fab CLI export succeeded for {Item}", item.DisplayName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Skipped {Item} — no supported backup method for {Type}",
+                            item.DisplayName, item.Type);
+                    }
+
                     completed++;
                 }
                 catch (Exception ex)

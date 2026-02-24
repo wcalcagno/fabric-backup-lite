@@ -1,0 +1,141 @@
+<Window x:Class="Fabric_backup_lite.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configuración / Settings"
+        Width="500" SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="#F0F2F5">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="PrimaryBrush"   Color="#0B5394"/>
+        <SolidColorBrush x:Key="SurfaceBrush"   Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="BorderBrush_"   Color="#DDE1E7"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#6B7280"/>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+            <Setter Property="Margin"     Value="0,0,0,4"/>
+        </Style>
+
+        <Style x:Key="FieldBox" TargetType="TextBox">
+            <Setter Property="FontSize"         Value="13"/>
+            <Setter Property="Padding"          Value="8,6"/>
+            <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush_}"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="Background"       Value="{StaticResource SurfaceBrush}"/>
+        </Style>
+
+        <Style x:Key="ActionButton" TargetType="Button">
+            <Setter Property="Padding"         Value="18,8"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel>
+
+        <!-- Header -->
+        <Border Background="{StaticResource PrimaryBrush}" Padding="18,14">
+            <StackPanel>
+                <TextBlock Text="⚙  Configuración / Settings"
+                           FontSize="17" FontWeight="Bold"
+                           Foreground="White"/>
+                <TextBlock x:Name="SubtitleBlock"
+                           FontSize="11" Foreground="#A8C8E8"
+                           Margin="0,4,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content -->
+        <StackPanel Margin="20,16,20,16">
+
+            <!-- Authentication section -->
+            <Border Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush_}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,14">
+                <StackPanel>
+
+                    <TextBlock x:Name="AuthHeaderBlock"
+                               FontSize="13" FontWeight="Bold"
+                               Foreground="{StaticResource PrimaryBrush}"
+                               Margin="0,0,0,12"/>
+
+                    <!-- Client ID -->
+                    <TextBlock x:Name="ClientIdLabelBlock" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="ClientIdBox"
+                             Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,12"/>
+
+                    <!-- Tenant ID -->
+                    <TextBlock x:Name="TenantIdLabelBlock" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="TenantIdBox"
+                             Style="{StaticResource FieldBox}"
+                             Margin="0,0,0,0"/>
+
+                </StackPanel>
+            </Border>
+
+            <!-- Hint -->
+            <Border Background="#EFF6FF"
+                    BorderBrush="#BFDBFE"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="12,8"
+                    Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="ℹ" FontSize="13" Foreground="#2563EB" Margin="0,0,8,0" VerticalAlignment="Top"/>
+                    <TextBlock x:Name="HintBlock"
+                               FontSize="11" Foreground="#1D4ED8"
+                               TextWrapping="Wrap" MaxWidth="390"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Buttons -->
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="1"
+                        x:Name="SaveBtn"
+                        Click="SaveButton_Click"
+                        Style="{StaticResource ActionButton}"
+                        Background="#16A34A"
+                        Foreground="White"
+                        Width="100"
+                        Margin="0,0,8,0"/>
+
+                <Button Grid.Column="2"
+                        x:Name="CloseBtn"
+                        Click="CloseButton_Click"
+                        Style="{StaticResource ActionButton}"
+                        Background="#6B7280"
+                        Foreground="White"
+                        Width="100"/>
+            </Grid>
+
+        </StackPanel>
+
+    </StackPanel>
+</Window>

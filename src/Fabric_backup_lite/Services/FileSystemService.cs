@@ -44,7 +44,10 @@ public class FileSystemService
             "Dataflows",
             "Lakehouses",
             "Warehouses",
-            "KQLDatabases"
+            "KQLDatabases",
+            "Eventhouses",
+            "Environments",
+            "SparkJobDefinitions"
         };
 
         foreach (var subDir in subDirs)
@@ -129,19 +132,22 @@ public class FileSystemService
         return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
     }
 
-    private string GetSubFolderForType(FabricItemType type)
+    public string GetSubFolderForType(FabricItemType type)
     {
         return type switch
         {
-            FabricItemType.Report => "Reports",
-            FabricItemType.SemanticModel => "SemanticModels",
-            FabricItemType.Notebook => "Notebooks",
-            FabricItemType.DataPipeline => "Pipelines",
-            FabricItemType.Dataflow => "Dataflows",
-            FabricItemType.Lakehouse => "Lakehouses",
-            FabricItemType.Warehouse => "Warehouses",
-            FabricItemType.KQLDatabase => "KQLDatabases",
-            _ => "Other"
+            FabricItemType.Report            => "Reports",
+            FabricItemType.SemanticModel     => "SemanticModels",
+            FabricItemType.Notebook          => "Notebooks",
+            FabricItemType.DataPipeline      => "Pipelines",
+            FabricItemType.Dataflow          => "Dataflows",
+            FabricItemType.Lakehouse         => "Lakehouses",
+            FabricItemType.Warehouse         => "Warehouses",
+            FabricItemType.KQLDatabase       => "KQLDatabases",
+            FabricItemType.Eventhouse        => "Eventhouses",
+            FabricItemType.Environment       => "Environments",
+            FabricItemType.SparkJobDefinition => "SparkJobDefinitions",
+            _                                => "Other"
         };
     }
 

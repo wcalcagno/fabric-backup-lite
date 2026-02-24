@@ -4,15 +4,30 @@ using System.Windows.Controls;
 using System.Windows.Navigation;
 using Fabric_backup_lite.Models;
 using Fabric_backup_lite.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Fabric_backup_lite.Views;
 
 public partial class MainWindow : Window
 {
-    public MainWindow(MainViewModel viewModel)
+    private readonly IServiceProvider _serviceProvider;
+
+    public MainWindow(MainViewModel viewModel, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         DataContext = viewModel;
+        _serviceProvider = serviceProvider;
+    }
+
+    // ------------------------------------------------------------------
+    // Settings button
+    // ------------------------------------------------------------------
+
+    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    {
+        var settingsWindow = _serviceProvider.GetRequiredService<SettingsWindow>();
+        settingsWindow.Owner = this;
+        settingsWindow.ShowDialog();
     }
 
     // ------------------------------------------------------------------

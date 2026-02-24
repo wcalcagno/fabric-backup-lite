@@ -10,5 +10,8 @@ public enum FabricItemType
     Lakehouse,
     Warehouse,
     KQLDatabase,
+    Eventhouse,
+    Environment,
+    SparkJobDefinition,
     Unknown
 }

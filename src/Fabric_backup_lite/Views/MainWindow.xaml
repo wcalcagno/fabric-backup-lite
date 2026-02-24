@@ -112,31 +112,396 @@
     </Window.Resources>
 
     <!-- ================================================================ -->
-    <!-- Layout principal: panel izquierdo | splitter | panel derecho     -->
+    <!-- Layout: header completo | contenido (explorador + panel derecho) -->
     <!-- ================================================================ -->
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="310" MinWidth="200"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
         <!-- ============================================================ -->
-        <!-- PANEL IZQUIERDO — Explorador de workspaces                   -->
+        <!-- HEADER COMPLETO — título, leyenda, usuario, signin, idioma   -->
         <!-- ============================================================ -->
-        <Border Grid.Column="0"
-                Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource BorderBrush_}"
-                BorderThickness="0,0,1,0">
+        <Border Grid.Row="0"
+                Background="{StaticResource PrimaryBrush}"
+                Padding="18,14">
             <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- App title + tagline + user -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Microsoft Fabric Backup Lite  v1.7.0"
+                               FontSize="19" FontWeight="Bold"
+                               Foreground="White" Margin="0"/>
+                    <TextBlock Text="{Binding L.AppTagline}"
+                               FontSize="9.5" Foreground="#A8C8E8"
+                               FontStyle="Italic"
+                               Margin="0,3,0,0"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding UserDisplayName}"
+                               FontSize="11" Foreground="#C8DFF0"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+
+                <!-- Sign In button -->
+                <Button Grid.Column="1"
+                        Content="{Binding L.SignInButton}"
+                        Command="{Binding SignInCommand}"
+                        Style="{StaticResource PrimaryButton}"
+                        Background="#1F6DB5"
+                        Foreground="White"
+                        Width="130"
+                        Margin="0,0,10,0"/>
+
+                <!-- Settings button -->
+                <Button Grid.Column="2"
+                        Content="⚙"
+                        Click="SettingsButton_Click"
+                        Style="{StaticResource SmallButton}"
+                        Background="Transparent"
+                        Foreground="White"
+                        FontSize="17"
+                        Width="36"
+                        Height="36"
+                        ToolTip="{Binding L.SettingsTitle}"
+                        Margin="0,0,10,0"/>
+
+                <!-- Language selector: ES | EN -->
+                <Border Grid.Column="3"
+                        BorderBrush="#4A90C4"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- ES button -->
+                        <Button Command="{Binding SetLanguageEsCommand}"
+                                Content="ES"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Width="38"
+                                Height="32"
+                                Cursor="Hand"
+                                BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background"  Value="Transparent"/>
+                                    <Setter Property="Foreground"  Value="#A8C8E8"/>
+                                    <Setter Property="FontWeight"  Value="Normal"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="5,0,0,5"
+                                                        Padding="4,4">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding L.IsSpanish}" Value="True">
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="Foreground" Value="#0B5394"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <!-- Separator -->
+                        <Border Width="1" Background="#4A90C4" VerticalAlignment="Stretch" Margin="0"/>
+                        <!-- EN button -->
+                        <Button Command="{Binding SetLanguageEnCommand}"
+                                Content="EN"
+                                FontSize="12"
+                                FontWeight="Bold"
+                                Width="38"
+                                Height="32"
+                                Cursor="Hand"
+                                BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background"  Value="Transparent"/>
+                                    <Setter Property="Foreground"  Value="#A8C8E8"/>
+                                    <Setter Property="FontWeight"  Value="Normal"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="0,5,5,0"
+                                                        Padding="4,4">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding L.IsSpanish}" Value="False">
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="Foreground" Value="#0B5394"/>
+                                            <Setter Property="FontWeight" Value="Bold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </Border>
+
+        <!-- ============================================================ -->
+        <!-- CONTENIDO: explorador | splitter | panel derecho             -->
+        <!-- ============================================================ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="310" MinWidth="200"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ======================================================== -->
+            <!-- PANEL IZQUIERDO — Explorador de workspaces               -->
+            <!-- ======================================================== -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush_}"
+                    BorderThickness="0,0,1,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header del panel izquierdo -->
+                    <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Padding="14,12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="{Binding L.ExplorerHeader}"
+                                       Foreground="White"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       Margin="0"/>
+
+                            <TextBlock Grid.Row="1"
+                                       Text="{Binding SelectedItemsInfo}"
+                                       Foreground="#A8C8E8"
+                                       FontSize="11"
+                                       Margin="0,4,0,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Botones Seleccionar Todo / Ninguno -->
+                    <Border Grid.Row="1"
+                            Background="#F8FAFB"
+                            BorderBrush="{StaticResource BorderBrush_}"
+                            BorderThickness="0,0,0,1"
+                            Padding="10,8">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{Binding L.SelectAllButton}"
+                                    Command="{Binding SelectAllCommand}"
+                                    Style="{StaticResource SmallButton}"
+                                    Background="#E8F4EA"
+                                    Foreground="#2D6A4F"
+                                    Margin="0,0,6,0"/>
+                            <Button Content="{Binding L.SelectNoneButton}"
+                                    Command="{Binding DeselectAllCommand}"
+                                    Style="{StaticResource SmallButton}"
+                                    Background="#FDE8E8"
+                                    Foreground="#B91C1C"
+                                    Margin="0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- TreeView con checkboxes -->
+                    <TreeView Grid.Row="2"
+                              x:Name="WorkspaceTreeView"
+                              ItemsSource="{Binding WorkspaceTreeNodes}"
+                              Background="{StaticResource SurfaceBrush}"
+                              BorderThickness="0"
+                              Padding="4,4"
+                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              SelectedItemChanged="WorkspaceTreeView_SelectedItemChanged">
+
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal" Margin="2,1"
+                                            ToolTip="{Binding TooltipText}">
+                                    <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                              IsThreeState="True"
+                                              IsEnabled="{Binding IsSupported}"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,5,0"
+                                              Click="TreeNodeCheckBox_Click"/>
+                                    <TextBlock Text="{Binding TypeIcon}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,5,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
+                                                        <Setter Property="Opacity" Value="0.4"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Name}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxWidth="190">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
+                                                        <Setter Property="Foreground" Value="#9CA3AF"/>
+                                                        <Setter Property="FontStyle"  Value="Italic"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+            </Border>
+
+            <!-- ======================================================== -->
+            <!-- SPLITTER                                                   -->
+            <!-- ======================================================== -->
+            <GridSplitter Grid.Column="1"
+                          Width="5"
+                          HorizontalAlignment="Stretch"
+                          Background="{StaticResource BorderBrush_}"
+                          Cursor="SizeWE"/>
+
+            <!-- ======================================================== -->
+            <!-- PANEL DERECHO — Destino, log, progreso, acciones         -->
+            <!-- ======================================================== -->
+            <Grid Grid.Column="2" Margin="16,14,16,14">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Header del panel izquierdo -->
-                <Border Grid.Row="0" Background="{StaticResource PrimaryBrush}" Padding="14,12">
+
+                <!-- Row 0: Carpeta de destino                            -->
+
+                <Border Grid.Row="0"
+                        Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush_}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,12"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="📂" FontSize="20" Margin="0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding L.DestinationFolderLabel}"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       Margin="0,0,0,2"/>
+                            <TextBox Text="{Binding DestinationPath, Mode=TwoWay}"
+                                     IsReadOnly="True"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     FontSize="13"
+                                     Padding="0"
+                                     Foreground="#111827"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="2"
+                                Content="{Binding L.BrowseButton}"
+                                Command="{Binding SelectDestinationCommand}"
+                                Style="{StaticResource SmallButton}"
+                                Background="#EEF2FF"
+                                Foreground="#4338CA"
+                                Width="90"
+                                Margin="12,0,0,0"/>
+                    </Grid>
+                </Border>
+
+
+                <!-- Row 1: Log                                           -->
+
+                <Border Grid.Row="1"
+                        Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush_}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="12,10"
+                        Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0"
+                                   Text="{Binding L.ActivityLogLabel}"
+                                   FontSize="11"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Margin="0,0,0,8"/>
+
+                        <ScrollViewer Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      x:Name="LogScrollViewer">
+                            <ItemsControl ItemsSource="{Binding LogMessages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}"
+                                                   FontFamily="Consolas"
+                                                   FontSize="11.5"
+                                                   Foreground="#374151"
+                                                   Margin="0,1"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+
+                <!-- Row 2: Barra de progreso                             -->
+
+                <Border Grid.Row="2"
+                        Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush_}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10"
+                        Margin="0,0,0,12">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -144,420 +509,82 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0"
-                                   Text="{Binding L.ExplorerHeader}"
-                                   Foreground="White"
-                                   FontSize="11"
-                                   FontWeight="Bold"
-                                   Margin="0"/>
+                                   Text="{Binding StatusMessage}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource PrimaryBrush}"
+                                   Margin="0,0,0,6"/>
 
-                        <TextBlock Grid.Row="1"
-                                   Text="{Binding SelectedItemsInfo}"
-                                   Foreground="#A8C8E8"
-                                   FontSize="11"
-                                   Margin="0,4,0,0"/>
+                        <ProgressBar Grid.Row="1"
+                                     Height="8"
+                                     Minimum="0"
+                                     Maximum="{Binding ProgressMaximum}"
+                                     Value="{Binding ProgressValue}"
+                                     Foreground="{StaticResource PrimaryBrush}"
+                                     Background="#E5E7EB"/>
                     </Grid>
                 </Border>
 
-                <!-- Botones Seleccionar Todo / Ninguno -->
-                <Border Grid.Row="1"
-                        Background="#F8FAFB"
-                        BorderBrush="{StaticResource BorderBrush_}"
-                        BorderThickness="0,0,0,1"
-                        Padding="10,8">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="{Binding L.SelectAllButton}"
-                                Command="{Binding SelectAllCommand}"
-                                Style="{StaticResource SmallButton}"
-                                Background="#E8F4EA"
-                                Foreground="#2D6A4F"
-                                Margin="0,0,6,0"/>
-                        <Button Content="{Binding L.SelectNoneButton}"
-                                Command="{Binding DeselectAllCommand}"
-                                Style="{StaticResource SmallButton}"
-                                Background="#FDE8E8"
-                                Foreground="#B91C1C"
-                                Margin="0"/>
-                    </StackPanel>
-                </Border>
 
-                <!-- TreeView con checkboxes -->
-                <TreeView Grid.Row="2"
-                          x:Name="WorkspaceTreeView"
-                          ItemsSource="{Binding WorkspaceTreeNodes}"
-                          Background="{StaticResource SurfaceBrush}"
-                          BorderThickness="0"
-                          Padding="4,4"
-                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                          SelectedItemChanged="WorkspaceTreeView_SelectedItemChanged">
+                <!-- Row 3: Botones de acción                             -->
 
-                    <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                            <StackPanel Orientation="Horizontal" Margin="2,1"
-                                        ToolTip="{Binding TooltipText}">
-                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                          IsThreeState="True"
-                                          IsEnabled="{Binding IsSupported}"
-                                          VerticalAlignment="Center"
-                                          Margin="0,0,5,0"
-                                          Click="TreeNodeCheckBox_Click"/>
-                                <TextBlock Text="{Binding TypeIcon}"
-                                           FontSize="13"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,5,0">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
-                                                    <Setter Property="Opacity" Value="0.4"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Text="{Binding Name}"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"
-                                           MaxWidth="190">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsUnsupported}" Value="True">
-                                                    <Setter Property="Foreground" Value="#9CA3AF"/>
-                                                    <Setter Property="FontStyle"  Value="Italic"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                        </HierarchicalDataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
-            </Grid>
-        </Border>
-
-        <!-- ============================================================ -->
-        <!-- SPLITTER                                                       -->
-        <!-- ============================================================ -->
-        <GridSplitter Grid.Column="1"
-                      Width="5"
-                      HorizontalAlignment="Stretch"
-                      Background="{StaticResource BorderBrush_}"
-                      Cursor="SizeWE"/>
-
-        <!-- ============================================================ -->
-        <!-- PANEL DERECHO — Configuración y log                          -->
-        <!-- ============================================================ -->
-        <Grid Grid.Column="2" Margin="16,14,16,14">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-
-            <!-- Row 0: Header / Autenticación                            -->
-
-            <Border Grid.Row="0"
-                    Background="{StaticResource PrimaryBrush}"
-                    CornerRadius="10"
-                    Padding="18,14"
-                    Margin="0,0,0,12">
-                <Grid>
+                <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- App title + user -->
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                        <TextBlock Text="Microsoft Fabric Backup Lite"
-                                   FontSize="19" FontWeight="Bold"
-                                   Foreground="White" Margin="0"/>
-                        <TextBlock Text="{Binding UserDisplayName}"
-                                   FontSize="12" Foreground="#A8C8E8"
-                                   Margin="0,4,0,0"/>
-                    </StackPanel>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding SelectedItemsInfo}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource TextMutedBrush}"/>
 
-                    <!-- Sign In button -->
                     <Button Grid.Column="1"
-                            Content="{Binding L.SignInButton}"
-                            Command="{Binding SignInCommand}"
+                            Content="{Binding L.StartBackupButton}"
+                            Command="{Binding StartBackupCommand}"
                             Style="{StaticResource PrimaryButton}"
-                            Background="#1F6DB5"
+                            Background="#16A34A"
                             Foreground="White"
-                            Width="130"
-                            Margin="0,0,10,0"/>
-
-                    <!-- Language selector: ES | EN -->
-                    <Border Grid.Column="2"
-                            BorderBrush="#4A90C4"
-                            BorderThickness="1"
-                            CornerRadius="6"
-                            VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
-                            <!-- ES button -->
-                            <Button Command="{Binding SetLanguageEsCommand}"
-                                    Content="ES"
-                                    FontSize="12"
-                                    FontWeight="Bold"
-                                    Width="38"
-                                    Height="32"
-                                    Cursor="Hand"
-                                    BorderThickness="0">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Background"  Value="Transparent"/>
-                                        <Setter Property="Foreground"  Value="#A8C8E8"/>
-                                        <Setter Property="FontWeight"  Value="Normal"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="{TemplateBinding Background}"
-                                                            CornerRadius="5,0,0,5"
-                                                            Padding="4,4">
-                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding L.IsSpanish}" Value="True">
-                                                <Setter Property="Background" Value="White"/>
-                                                <Setter Property="Foreground" Value="#0B5394"/>
-                                                <Setter Property="FontWeight" Value="Bold"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                            <!-- Separator -->
-                            <Border Width="1" Background="#4A90C4" VerticalAlignment="Stretch" Margin="0"/>
-                            <!-- EN button -->
-                            <Button Command="{Binding SetLanguageEnCommand}"
-                                    Content="EN"
-                                    FontSize="12"
-                                    FontWeight="Bold"
-                                    Width="38"
-                                    Height="32"
-                                    Cursor="Hand"
-                                    BorderThickness="0">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Background"  Value="Transparent"/>
-                                        <Setter Property="Foreground"  Value="#A8C8E8"/>
-                                        <Setter Property="FontWeight"  Value="Normal"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="{TemplateBinding Background}"
-                                                            CornerRadius="0,5,5,0"
-                                                            Padding="4,4">
-                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding L.IsSpanish}" Value="False">
-                                                <Setter Property="Background" Value="White"/>
-                                                <Setter Property="Foreground" Value="#0B5394"/>
-                                                <Setter Property="FontWeight" Value="Bold"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                        </StackPanel>
-                    </Border>
-
-                </Grid>
-            </Border>
-
-
-            <!-- Row 1: Carpeta de destino                                -->
-
-            <Border Grid.Row="1"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource BorderBrush_}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="16,12"
-                    Margin="0,0,0,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
-                        <TextBlock Text="📂" FontSize="20" Margin="0"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding L.DestinationFolderLabel}"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextMutedBrush}"
-                                   Margin="0,0,0,2"/>
-                        <TextBox Text="{Binding DestinationPath, Mode=TwoWay}"
-                                 IsReadOnly="True"
-                                 Background="Transparent"
-                                 BorderThickness="0"
-                                 FontSize="13"
-                                 Padding="0"
-                                 Foreground="#111827"/>
-                    </StackPanel>
+                            Width="150"
+                            Margin="0,0,8,0"/>
 
                     <Button Grid.Column="2"
-                            Content="{Binding L.BrowseButton}"
-                            Command="{Binding SelectDestinationCommand}"
-                            Style="{StaticResource SmallButton}"
-                            Background="#EEF2FF"
-                            Foreground="#4338CA"
-                            Width="90"
-                            Margin="12,0,0,0"/>
+                            Content="{Binding L.CancelButton}"
+                            Command="{Binding CancelCommand}"
+                            Style="{StaticResource PrimaryButton}"
+                            Background="#DC2626"
+                            Foreground="White"
+                            Width="110"/>
                 </Grid>
-            </Border>
 
 
-            <!-- Row 2: Log                                               -->
+                <!-- Row 4: Aviso versión Beta                            -->
 
-            <Border Grid.Row="2"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource BorderBrush_}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="12,10"
-                    Margin="0,0,0,12">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <Border Grid.Row="4"
+                        Background="#FFFBEB"
+                        BorderBrush="#FDE68A"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10"
+                        Margin="0,10,0,0">
+                    <Expander Header="{Binding L.BetaWarningHeader}"
+                              FontSize="11"
+                              FontWeight="SemiBold"
+                              Foreground="#92400E"
+                              IsExpanded="False">
+                        <TextBlock Margin="4,8,0,2"
+                                   FontSize="11"
+                                   Foreground="#78350F"
+                                   TextWrapping="Wrap"
+                                   LineHeight="18">
+                            <Run Text="{Binding L.BetaWarningText1, Mode=OneWay}"/><Hyperlink NavigateUri="mailto:Walter@inegocios.cl" RequestNavigate="Hyperlink_RequestNavigate">Walter@inegocios.cl</Hyperlink><Run Text="{Binding L.BetaWarningText2, Mode=OneWay}"/>
+                        </TextBlock>
+                    </Expander>
+                </Border>
 
-                    <TextBlock Grid.Row="0"
-                               Text="{Binding L.ActivityLogLabel}"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource TextMutedBrush}"
-                               Margin="0,0,0,8"/>
-
-                    <ScrollViewer Grid.Row="1"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  x:Name="LogScrollViewer">
-                        <ItemsControl ItemsSource="{Binding LogMessages}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}"
-                                               FontFamily="Consolas"
-                                               FontSize="11.5"
-                                               Foreground="#374151"
-                                               Margin="0,1"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-
-            <!-- Row 3: Barra de progreso                                  -->
-
-            <Border Grid.Row="3"
-                    Background="{StaticResource SurfaceBrush}"
-                    BorderBrush="{StaticResource BorderBrush_}"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="14,10"
-                    Margin="0,0,0,12">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0"
-                               Text="{Binding StatusMessage}"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               Foreground="{StaticResource PrimaryBrush}"
-                               Margin="0,0,0,6"/>
-
-                    <ProgressBar Grid.Row="1"
-                                 Height="8"
-                                 Minimum="0"
-                                 Maximum="{Binding ProgressMaximum}"
-                                 Value="{Binding ProgressValue}"
-                                 Foreground="{StaticResource PrimaryBrush}"
-                                 Background="#E5E7EB"/>
-                </Grid>
-            </Border>
-
-
-            <!-- Row 4: Botones de acción                                  -->
-
-            <Grid Grid.Row="4">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0"
-                           Text="{Binding SelectedItemsInfo}"
-                           VerticalAlignment="Center"
-                           FontSize="12"
-                           Foreground="{StaticResource TextMutedBrush}"/>
-
-                <Button Grid.Column="1"
-                        Content="{Binding L.StartBackupButton}"
-                        Command="{Binding StartBackupCommand}"
-                        Style="{StaticResource PrimaryButton}"
-                        Background="#16A34A"
-                        Foreground="White"
-                        Width="150"
-                        Margin="0,0,8,0"/>
-
-                <Button Grid.Column="2"
-                        Content="{Binding L.CancelButton}"
-                        Command="{Binding CancelCommand}"
-                        Style="{StaticResource PrimaryButton}"
-                        Background="#DC2626"
-                        Foreground="White"
-                        Width="110"/>
             </Grid>
-
-            <!-- Row 5: Aviso versión Beta -->
-
-            <Border Grid.Row="5"
-                    Background="#FFFBEB"
-                    BorderBrush="#FDE68A"
-                    BorderThickness="1"
-                    CornerRadius="8"
-                    Padding="14,10"
-                    Margin="0,10,0,0">
-                <Expander Header="{Binding L.BetaWarningHeader}"
-                          FontSize="11"
-                          FontWeight="SemiBold"
-                          Foreground="#92400E"
-                          IsExpanded="False">
-                    <TextBlock Margin="4,8,0,2"
-                               FontSize="11"
-                               Foreground="#78350F"
-                               TextWrapping="Wrap"
-                               LineHeight="18">
-                        <Run Text="{Binding L.BetaWarningText1, Mode=OneWay}"/><Hyperlink NavigateUri="mailto:Walter@inegocios.cl" RequestNavigate="Hyperlink_RequestNavigate">Walter@inegocios.cl</Hyperlink><Run Text="{Binding L.BetaWarningText2, Mode=OneWay}"/>
-                    </TextBlock>
-                </Expander>
-            </Border>
-
         </Grid>
     </Grid>
 </Window>

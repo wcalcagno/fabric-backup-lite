@@ -8,7 +8,9 @@ public class AuthenticationService : IAuthenticationService
 {
     private readonly IPublicClientApplication _msalClient;
     private readonly string[] _scopes;
+    private readonly string[] _storageScopes = new[] { "https://storage.azure.com/.default" };
     private readonly ILogger<AuthenticationService> _logger;
+    private readonly string _clientId;
     private IAccount? _currentAccount;
 
     public bool IsAuthenticated => _currentAccount != null;
@@ -18,8 +20,9 @@ public class AuthenticationService : IAuthenticationService
     {
         _logger = logger;
 
-        var clientId = configuration["Authentication:ClientId"]
+        _clientId = configuration["Authentication:ClientId"]
             ?? throw new InvalidOperationException("ClientId not configured");
+        var clientId = _clientId;
         var tenantId = configuration["Authentication:TenantId"] ?? "common";
         var redirectUri = configuration["Authentication:RedirectUri"] ?? "http://localhost";
 
@@ -109,6 +112,56 @@ public class AuthenticationService : IAuthenticationService
             _logger.LogWarning("Token expired, re-authentication required");
             await SignInAsync();
             return await GetAccessTokenAsync(cancellationToken);
+        }
+    }
+
+    public async Task<string> GetStorageTokenAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentAccount == null)
+            throw new InvalidOperationException("Not authenticated. Call SignInAsync first.");
+
+        try
+        {
+            try
+            {
+                var result = await _msalClient
+                    .AcquireTokenSilent(_storageScopes, _currentAccount)
+                    .ExecuteAsync(cancellationToken);
+
+                _logger.LogDebug("Storage token acquired (expires: {ExpiresOn})", result.ExpiresOn);
+                return result.AccessToken;
+            }
+            catch (MsalUiRequiredException)
+            {
+                _logger.LogInformation("Storage token requires interactive consent");
+                var result = await _msalClient
+                    .AcquireTokenInteractive(_storageScopes)
+                    .WithAccount(_currentAccount)
+                    .WithPrompt(Prompt.Consent)
+                    .ExecuteAsync(cancellationToken);
+
+                _logger.LogInformation("Storage token acquired interactively");
+                return result.AccessToken;
+            }
+        }
+        catch (MsalServiceException msalEx) when (
+            msalEx.Message.Contains("AADSTS650057") ||
+            msalEx.Message.Contains("AADSTS70011"))
+        {
+            var instructions =
+                "Para respaldar Warehouses via OneLake, el registro de la aplicación " +
+                "necesita el permiso 'Azure Data Lake > user_impersonation'.\n\n" +
+                $"App ID: {_clientId}\n\n" +
+                "Pasos para agregarlo:\n" +
+                "  1. Ir a portal.azure.com\n" +
+                "  2. Microsoft Entra ID → App registrations\n" +
+                $"  3. Buscar la aplicación con App ID: {_clientId}\n" +
+                "  4. API permissions → Add a permission\n" +
+                "  5. Seleccionar 'Azure Data Lake' → Delegated permissions → user_impersonation\n" +
+                "  6. Grant admin consent (si aplica)";
+
+            _logger.LogError(msalEx, "Azure Storage scope not authorized (AADSTS). {Instructions}", instructions);
+            throw new InvalidOperationException(instructions, msalEx);
         }
     }
 

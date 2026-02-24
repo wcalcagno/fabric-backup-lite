@@ -19,10 +19,17 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // User-editable settings override appsettings.json (saved in AppData so they
+        // survive application upgrades and work from a read-only install directory).
+        var userSettingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "WeData", "FabricBackupLite", "usersettings.json");
+
         // Build configuration
         _configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile(userSettingsPath, optional: true, reloadOnChange: false)
             .Build();
 
         // Logs go to %APPDATA%\WeData\FabricBackupLite\logs\ so they are
@@ -85,12 +92,15 @@ public partial class App : Application
         services.AddTransient<IFabricApiClient, FabricApiClient>();
         services.AddTransient<IBackupService, BackupService>();
         services.AddSingleton<FileSystemService>();
+        services.AddTransient<IOneLakeDownloadService, OneLakeDownloadService>();
+        services.AddSingleton<IFabCliService, FabCliService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
 
         // Views
         services.AddTransient<MainWindow>();
+        services.AddTransient<SettingsWindow>();
     }
 
     protected override void OnExit(ExitEventArgs e)
