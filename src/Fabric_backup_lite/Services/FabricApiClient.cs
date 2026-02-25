@@ -162,16 +162,196 @@ public class FabricApiClient : IFabricApiClient
         var locationHeader = response.Headers.Location
             ?? throw new InvalidOperationException("No Location header in 202 Accepted response");
 
-        // 3. Polling hasta completar
-        var pollingStartTime = DateTime.UtcNow;
+        // 3. Poll until Succeeded
+        var pollContent = await PollLroAsync(locationHeader, cancellationToken);
+        var status = JsonSerializer.Deserialize<LROStatusResponse>(pollContent,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        _logger.LogInformation("[DIAG] LRO Succeeded for {Type}/{ItemId}. Polling body: {Body}",
+            itemType, itemId,
+            pollContent.Length > 400 ? pollContent[..400] : pollContent);
+
+        // Fabric API v1: la definición puede estar inline en el polling response…
+        if (status?.Definition?.Parts != null && status.Definition.Parts.Count > 0)
+            return ExtractDefinitionContent(status, itemType);
+
+        // …o en la URL de resultado de la operación: GET {operationUrl}/result
+        var resultUrl = locationHeader.ToString().TrimEnd('/') + "/result";
+        var resultReq  = new HttpRequestMessage(HttpMethod.Get, new Uri(resultUrl));
+        await AddAuthHeaderAsync(resultReq, cancellationToken);
+
+        var resultResp = await ExecuteWithRetryAsync(resultReq, cancellationToken);
+        var resultJson = await resultResp.Content.ReadAsStringAsync(cancellationToken);
+
+        _logger.LogInformation("[DIAG] Result URL {Url} → {Status} | Body: {Body}",
+            resultUrl,
+            (int)resultResp.StatusCode,
+            resultJson.Length > 800 ? resultJson[..800] : resultJson);
+
+        if (!resultResp.IsSuccessStatusCode)
+            throw new InvalidOperationException(
+                $"Result URL returned {resultResp.StatusCode}: {resultJson}");
+
+        var resultDef = JsonSerializer.Deserialize<DefinitionResponse>(resultJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        if (resultDef?.Definition?.Parts != null && resultDef.Definition.Parts.Count > 0)
+            return ExtractDefinitionContent(resultDef, itemType);
+
+        var resultSnippet = resultJson.Length > 300 ? resultJson[..300] : resultJson;
+        throw new InvalidOperationException(
+            $"LRO succeeded but no definition parts found. HTTP {(int)resultResp.StatusCode}. Body: {resultSnippet}");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // GetCapacitiesAsync
+    // ──────────────────────────────────────────────────────────────
+
+    public async Task<List<FabricCapacity>> GetCapacitiesAsync(CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Fetching capacities");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "capacities");
+        await AddAuthHeaderAsync(request, cancellationToken);
+
+        var response = await ExecuteWithRetryAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var content  = await response.Content.ReadAsStringAsync(cancellationToken);
+        var result   = JsonSerializer.Deserialize<CapacitiesResponse>(content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        return result?.Value?.Select(c => new FabricCapacity
+        {
+            Id          = c.Id,
+            DisplayName = c.DisplayName,
+            Sku         = c.Sku,
+            Region      = c.Region,
+            State       = c.State
+        }).ToList() ?? new List<FabricCapacity>();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // CreateWorkspaceAsync
+    // ──────────────────────────────────────────────────────────────
+
+    public async Task<Workspace> CreateWorkspaceAsync(
+        string displayName,
+        string capacityId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Creating workspace '{Name}' on capacity {CapacityId}", displayName, capacityId);
+
+        var body    = JsonSerializer.Serialize(new { displayName, capacityId });
+        var request = new HttpRequestMessage(HttpMethod.Post, "workspaces")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        await AddAuthHeaderAsync(request, cancellationToken);
+
+        var response = await ExecuteWithRetryAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        var ws = JsonSerializer.Deserialize<Workspace>(content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new InvalidOperationException("Could not parse created workspace response");
+
+        _logger.LogInformation("Created workspace '{Name}' with ID {Id}", ws.Name, ws.Id);
+        return ws;
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // CreateItemWithDefinitionAsync
+    // ──────────────────────────────────────────────────────────────
+
+    public async Task<string> CreateItemWithDefinitionAsync(
+        string workspaceId,
+        FabricItemType itemType,
+        string displayName,
+        List<(byte[] content, string partPath)> parts,
+        CancellationToken cancellationToken = default)
+    {
+        var typeSegment = GetTypeSegment(itemType)
+            ?? throw new NotSupportedException($"Item type '{itemType}' is not supported for restore.");
+
+        _logger.LogInformation("Creating {Type} '{Name}' in workspace {WorkspaceId}", itemType, displayName, workspaceId);
+
+        object bodyObj;
+        if (itemType == FabricItemType.Lakehouse)
+        {
+            bodyObj = new { displayName };
+        }
+        else
+        {
+            var partsArray = parts.Select(p => new
+            {
+                path        = p.partPath,
+                payload     = Convert.ToBase64String(p.content),
+                payloadType = "InlineBase64"
+            }).ToArray();
+
+            if (itemType == FabricItemType.Notebook)
+                bodyObj = new { displayName, definition = new { format = "ipynb", parts = partsArray } };
+            else
+                bodyObj = new { displayName, definition = new { parts = partsArray } };
+        }
+
+        var body    = JsonSerializer.Serialize(bodyObj);
+        var url     = $"workspaces/{workspaceId}/{typeSegment}";
+        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        await AddAuthHeaderAsync(request, cancellationToken);
+
+        var response = await ExecuteWithRetryAsync(request, cancellationToken);
+
+        // 201 Created — item was created synchronously
+        if (response.StatusCode == HttpStatusCode.Created)
+        {
+            var created = await response.Content.ReadAsStringAsync(cancellationToken);
+            var item    = JsonSerializer.Deserialize<CreateItemResponse>(created,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            _logger.LogInformation("Created {Type} '{Name}' synchronously, new ID: {Id}", itemType, displayName, item?.Id);
+            return item?.Id ?? string.Empty;
+        }
+
+        // 202 Accepted — LRO
+        if (response.StatusCode == HttpStatusCode.Accepted)
+        {
+            var locationHeader = response.Headers.Location
+                ?? throw new InvalidOperationException("No Location header in 202 Accepted response for CreateItem");
+
+            var pollContent = await PollLroAsync(locationHeader, cancellationToken);
+            var lroResult   = JsonSerializer.Deserialize<CreateItemLROResult>(pollContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var newId = lroResult?.CreatedItemId ?? lroResult?.ItemId ?? string.Empty;
+            _logger.LogInformation("Created {Type} '{Name}' via LRO, new ID: {Id}", itemType, displayName, newId);
+            return newId;
+        }
+
+        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        throw new HttpRequestException(
+            $"CreateItem failed ({(int)response.StatusCode} {response.StatusCode}): {errorContent}");
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // PollLroAsync — shared LRO polling helper
+    // ──────────────────────────────────────────────────────────────
+
+    private async Task<string> PollLroAsync(Uri locationUri, CancellationToken cancellationToken)
+    {
+        var started = DateTime.UtcNow;
         while (true)
         {
-            if (DateTime.UtcNow - pollingStartTime > _lroTimeout)
+            if (DateTime.UtcNow - started > _lroTimeout)
                 throw new TimeoutException($"LRO polling timeout after {_lroTimeout.TotalMinutes} minutes");
 
             await Task.Delay(_lroPollingInterval, cancellationToken);
 
-            var pollRequest = new HttpRequestMessage(HttpMethod.Get, locationHeader);
+            var pollRequest = new HttpRequestMessage(HttpMethod.Get, locationUri);
             await AddAuthHeaderAsync(pollRequest, cancellationToken);
 
             var pollResponse = await ExecuteWithRetryAsync(pollRequest, cancellationToken);
@@ -182,51 +362,13 @@ public class FabricApiClient : IFabricApiClient
 
             _logger.LogDebug("LRO Status: {Status}", status?.Status);
 
-            if (status?.Status == "Succeeded")
-            {
-                _logger.LogInformation("[DIAG] LRO Succeeded for {Type}/{ItemId}. Polling body: {Body}",
-                    itemType, itemId,
-                    pollContent.Length > 400 ? pollContent[..400] : pollContent);
-
-                // Fabric API v1: la definición puede estar inline en el polling response…
-                if (status.Definition?.Parts != null && status.Definition.Parts.Count > 0)
-                    return ExtractDefinitionContent(status, itemType);
-
-                // …o en la URL de resultado de la operación: GET {operationUrl}/result
-                var resultUrl = locationHeader.ToString().TrimEnd('/') + "/result";
-                var resultReq  = new HttpRequestMessage(HttpMethod.Get, new Uri(resultUrl));
-                await AddAuthHeaderAsync(resultReq, cancellationToken);
-
-                var resultResp = await ExecuteWithRetryAsync(resultReq, cancellationToken);
-                var resultJson = await resultResp.Content.ReadAsStringAsync(cancellationToken);
-
-                _logger.LogInformation("[DIAG] Result URL {Url} → {Status} | Body: {Body}",
-                    resultUrl,
-                    (int)resultResp.StatusCode,
-                    resultJson.Length > 800 ? resultJson[..800] : resultJson);
-
-                if (!resultResp.IsSuccessStatusCode)
-                    throw new InvalidOperationException(
-                        $"Result URL returned {resultResp.StatusCode}: {resultJson}");
-
-                var resultDef = JsonSerializer.Deserialize<DefinitionResponse>(resultJson,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (resultDef?.Definition?.Parts != null && resultDef.Definition.Parts.Count > 0)
-                    return ExtractDefinitionContent(resultDef, itemType);
-
-                // Include the raw JSON in the error so it appears in the UI log and helps diagnosis.
-                var snippet = resultJson.Length > 300 ? resultJson[..300] : resultJson;
-                throw new InvalidOperationException(
-                    $"LRO succeeded but no definition parts found. HTTP {(int)resultResp.StatusCode}. Body: {snippet}");
-            }
+            if (status?.Status == "Succeeded") return pollContent;
 
             if (status?.Status == "Failed")
             {
                 var error = status.Error?.Message ?? "Unknown error";
                 throw new Exception($"LRO failed: {error}");
             }
-
             // Continue polling (Running / NotStarted)
         }
     }
@@ -397,5 +539,33 @@ public class FabricApiClient : IFabricApiClient
     {
         public string Message { get; set; } = string.Empty;
         public string ErrorCode { get; set; } = string.Empty;
+    }
+
+    private class CapacitiesResponse
+    {
+        public List<CapacityDto> Value { get; set; } = new();
+    }
+
+    private class CapacityDto
+    {
+        public string Id          { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Sku         { get; set; } = string.Empty;
+        public string Region      { get; set; } = string.Empty;
+        public string State       { get; set; } = string.Empty;
+    }
+
+    private class CreateItemResponse
+    {
+        public string Id          { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string Type        { get; set; } = string.Empty;
+    }
+
+    private class CreateItemLROResult
+    {
+        // Some Fabric LRO responses use "createdItemId", others "itemId"
+        public string? CreatedItemId { get; set; }
+        public string? ItemId        { get; set; }
     }
 }

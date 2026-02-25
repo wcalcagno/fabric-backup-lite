@@ -118,6 +118,12 @@ public class MainViewModel : ViewModelBase
     private List<Workspace> _workspaces = new();
 
     // ------------------------------------------------------------------ //
+    //  Restore ViewModel (exposed so the Restore tab can bind to it)    //
+    // ------------------------------------------------------------------ //
+
+    public RestoreViewModel RestoreVm { get; }
+
+    // ------------------------------------------------------------------ //
     //  Commands                                                            //
     // ------------------------------------------------------------------ //
 
@@ -138,12 +144,14 @@ public class MainViewModel : ViewModelBase
         IAuthenticationService authService,
         IFabricApiClient fabricClient,
         IBackupService backupService,
+        RestoreViewModel restoreViewModel,
         ILogger<MainViewModel> logger)
     {
         _authService   = authService;
         _fabricClient  = fabricClient;
         _backupService = backupService;
         _logger        = logger;
+        RestoreVm      = restoreViewModel;
 
         SignInCommand = new AsyncRelayCommand(
             async _ => await SignInAsync(),
@@ -213,6 +221,9 @@ public class MainViewModel : ViewModelBase
 
             ((RelayCommand)SelectAllCommand).RaiseCanExecuteChanged();
             ((RelayCommand)DeselectAllCommand).RaiseCanExecuteChanged();
+
+            // Load workspaces for the Restore tab as well
+            await RestoreVm.LoadWorkspacesForRestoreAsync();
         }
         catch (Exception ex)
         {

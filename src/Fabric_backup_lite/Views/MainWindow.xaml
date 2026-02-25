@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Fabric_backup_lite.Views"
         mc:Ignorable="d"
-        Title="Fabric Backup Lite" Height="720" Width="1100"
+        Title="Microsoft Fabric Backup Lite  v2.0.0" Height="720" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="#F0F2F5"
         Icon="/Assets/app.ico">
@@ -109,6 +110,44 @@
             <Setter Property="Padding"     Value="10,4"/>
         </Style>
 
+        <!-- ============================================================ -->
+        <!-- TabControl / TabItem styles                                   -->
+        <!-- ============================================================ -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background"        Value="#F0F2F5"/>
+            <Setter Property="BorderThickness"   Value="0"/>
+            <Setter Property="Padding"           Value="0"/>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="FontSize"          Value="13"/>
+            <Setter Property="FontWeight"        Value="SemiBold"/>
+            <Setter Property="Foreground"        Value="#4B5563"/>
+            <Setter Property="Background"        Value="Transparent"/>
+            <Setter Property="BorderThickness"   Value="0"/>
+            <Setter Property="Padding"           Value="16,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                BorderThickness="0,0,0,3" BorderBrush="Transparent"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#0B5394"/>
+                                <Setter Property="Foreground" Value="#0B5394"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E8EFF7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Window.Resources>
 
     <!-- ================================================================ -->
@@ -136,7 +175,7 @@
 
                 <!-- App title + tagline + user -->
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Microsoft Fabric Backup Lite  v1.7.0"
+                    <TextBlock Text="Microsoft Fabric Backup Lite  v2.0.0"
                                FontSize="19" FontWeight="Bold"
                                Foreground="White" Margin="0"/>
                     <TextBlock Text="{Binding L.AppTagline}"
@@ -258,9 +297,13 @@
         </Border>
 
         <!-- ============================================================ -->
-        <!-- CONTENIDO: explorador | splitter | panel derecho             -->
+        <!-- TABS: Backup | Restore                                       -->
         <!-- ============================================================ -->
-        <Grid Grid.Row="1">
+        <TabControl Grid.Row="1">
+
+            <!-- ── Tab 1: Backup ── -->
+            <TabItem Header="{Binding L.BackupTabHeader}">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="310" MinWidth="200"/>
                 <ColumnDefinition Width="5"/>
@@ -586,5 +629,13 @@
 
             </Grid>
         </Grid>
+            </TabItem>
+
+            <!-- ── Tab 2: Restore ── -->
+            <TabItem Header="{Binding L.RestoreTabHeader}">
+                <local:RestoreTab DataContext="{Binding RestoreVm}"/>
+            </TabItem>
+
+        </TabControl>
     </Grid>
 </Window>

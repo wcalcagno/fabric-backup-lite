@@ -160,6 +160,74 @@ public sealed class LocalizationService : INotifyPropertyChanged
         : "Settings saved successfully.\n\nPlease restart the application to apply the changes.";
     public string SettingsSavedTitle  => IsSpanish ? "Guardado"                        : "Saved";
 
+    // ---- Tab headers ----
+    public string BackupTabHeader  => IsSpanish ? "💾  Backup"  : "💾  Backup";
+    public string RestoreTabHeader => IsSpanish ? "↩  Restaurar" : "↩  Restore";
+
+    // ---- Restore — left panel ----
+    public string RestoreExplorerHeader    => IsSpanish ? "ÍTEMS A RESTAURAR"                 : "ITEMS TO RESTORE";
+    public string RestoreZeroSelected      => IsSpanish ? "0 ítems seleccionados"              : "0 items selected";
+    public string RestoreItemsSelectedFmt  => IsSpanish ? "{0} ítem(s) seleccionado(s)"        : "{0} item(s) selected";
+
+    // ---- Restore — source folder ----
+    public string SourceFolderLabel       => IsSpanish ? "Carpeta raíz de backups"            : "Backup root folder";
+    public string DiscoveredBackupsLabel  => IsSpanish ? "Versión de backup"                  : "Backup version";
+    public string NoBackupsFound          => IsSpanish ? "No se encontraron backups en la carpeta seleccionada." : "No backups found in the selected folder.";
+    public string SelectSourceTitle       => IsSpanish ? "Seleccionar carpeta raíz de backups" : "Select backup root folder";
+
+    // ---- Restore — destination workspace ----
+    public string DestWorkspaceLabel      => IsSpanish ? "Área de trabajo destino"            : "Destination workspace";
+    public string NewWorkspaceOption      => IsSpanish ? "＋  Nuevo workspace"                : "＋  New workspace";
+    public string NewWorkspaceNameLabel   => IsSpanish ? "Nombre del nuevo workspace"         : "New workspace name";
+    public string CapacityLabel           => IsSpanish ? "Capacidad Fabric"                   : "Fabric capacity";
+    public string LoadingCapacities       => IsSpanish ? "Cargando capacidades..."            : "Loading capacities...";
+    public string NoCapacitiesFound       => IsSpanish ? "No se encontraron capacidades."     : "No capacities found.";
+
+    // ---- Restore — action button ----
+    public string StartRestoreButton      => IsSpanish ? "▶  Iniciar Restore"                 : "▶  Start Restore";
+
+    // ---- Restore — tooltip ----
+    public string WarehouseRestoreTooltip => IsSpanish
+        ? "Los Warehouses no pueden restaurarse mediante API. Debe recrearse manualmente."
+        : "Warehouses cannot be restored via API. Must be recreated manually.";
+
+    // ---- Restore — status & log messages ----
+    public string RestoreReady              => IsSpanish ? "Listo para restaurar."             : "Ready to restore.";
+    public string RestoreInProgress         => IsSpanish ? "Restauración en progreso..."       : "Restore in progress...";
+    public string RestoringItemFmt          => IsSpanish ? "Restaurando {0}: {1}"              : "Restoring {0}: {1}";
+    public string RestoreCompletedStatus    => IsSpanish ? "Restauración completada."          : "Restore completed.";
+    public string RestoreCompletedLog       => IsSpanish ? "✅ Restauración completada."       : "✅ Restore completed.";
+    public string ItemsRestoredFmt          => IsSpanish ? "{0} ítem(s) restaurado(s)."        : "{0} item(s) restored.";
+    public string RestoreCompletedMsgFmt    => IsSpanish
+        ? "Se restauraron {0} ítem(s) correctamente en el workspace '{1}'."
+        : "{0} item(s) restored successfully to workspace '{1}'.";
+    public string RestoreCompleteTitle      => IsSpanish ? "Restauración completada"           : "Restore Complete";
+    public string RestoreWithErrorsLog      => IsSpanish ? "⚠️ Restauración con errores."      : "⚠️ Restore completed with errors.";
+    public string RestoreWithErrorsStatusFmt => IsSpanish ? "Restauración con {0} error(es)."  : "Restore completed with {0} error(s).";
+    public string RestoreWithErrorsMsgFmt   => IsSpanish
+        ? "Se restauraron {0} ítem(s), pero {1} error(es) ocurrieron."
+        : "{0} item(s) restored, but {1} error(s) occurred.";
+    public string RestoreWithErrorsTitle    => IsSpanish ? "Restauración con errores"          : "Restore with Errors";
+    public string RestoreCancelledLog       => IsSpanish ? "🚫 Restauración cancelada."        : "🚫 Restore cancelled.";
+    public string RestoreCancelledStatus    => IsSpanish ? "Restauración cancelada."           : "Restore cancelled.";
+    public string RestoreCancelledMsg       => IsSpanish ? "La restauración fue cancelada por el usuario." : "The restore was cancelled by the user.";
+    public string RestoreCancelledTitle     => IsSpanish ? "Cancelado"                         : "Cancelled";
+    public string RestoreErrorFmt           => IsSpanish ? "❌ Error en restauración: {0}"     : "❌ Restore error: {0}";
+    public string RestoreErrorStatus        => IsSpanish ? "Error en restauración."            : "Restore error.";
+    public string RestoreErrorMsgFmt        => IsSpanish ? "Error al restaurar: {0}"           : "Restore failed: {0}";
+    public string RestoreErrorTitle         => IsSpanish ? "Error de restauración"             : "Restore Error";
+    public string CreatingWorkspaceLog      => IsSpanish ? "Creando workspace '{0}'..."        : "Creating workspace '{0}'...";
+    public string WorkspaceCreatedLog       => IsSpanish ? "✅ Workspace '{0}' creado (ID: {1})." : "✅ Workspace '{0}' created (ID: {1}).";
+    public string SelectAtLeastOneRestoreMsg => IsSpanish
+        ? "Seleccione al menos un ítem para restaurar."
+        : "Please select at least one item to restore.";
+    public string NoBackupSelectedMsg       => IsSpanish
+        ? "Seleccione un backup y un workspace de destino."
+        : "Please select a backup and a destination workspace.";
+    public string LoadingWorkspacesForRestore => IsSpanish
+        ? "Cargando workspaces para restauración..."
+        : "Loading workspaces for restore...";
+
     // ---- WorkspaceTreeNode ----
     public string LoadingPlaceholder => IsSpanish ? "Cargando..." : "Loading...";
     public string UnsupportedTooltip => IsSpanish

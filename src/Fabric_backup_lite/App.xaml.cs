@@ -94,8 +94,10 @@ public partial class App : Application
         services.AddSingleton<FileSystemService>();
         services.AddTransient<IOneLakeDownloadService, OneLakeDownloadService>();
         services.AddSingleton<IFabCliService, FabCliService>();
+        services.AddTransient<IRestoreService, RestoreService>();
 
         // ViewModels
+        services.AddTransient<RestoreViewModel>();
         services.AddTransient<MainViewModel>();
 
         // Views
