@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?logo=windows" alt="Windows"/>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"/>
-  <img src="https://img.shields.io/badge/version-1.7.0-blue" alt="v1.7.0"/>
+  <img src="https://img.shields.io/badge/version-2.0.0-blue" alt="v2.0.0"/>
   <img src="https://img.shields.io/badge/lang-ES%20%7C%20EN-orange" alt="ES | EN"/>
 </p>
 
@@ -20,28 +20,38 @@
 
 ## Español
 
-Herramienta gratuita de backup para **Microsoft Fabric** y **Power BI**, con instalador MSI para Windows.
+Herramienta gratuita de **backup y restauración** para **Microsoft Fabric** y **Power BI**, con instalador MSI para Windows.
 
 ### ¿Qué hace?
 
-Se conecta al tenant de Microsoft Fabric/Power BI mediante la API REST oficial y descarga las definiciones de los artefactos a carpetas locales, preservando la estructura y la metadata.
+Se conecta al tenant de Microsoft Fabric/Power BI mediante la API REST oficial y descarga las definiciones de los artefactos a carpetas locales, preservando la estructura y la metadata. A partir de v2.0.0 también permite restaurar esos artefactos en cualquier workspace del mismo tenant.
 
-| Tipo de ítem | Formato guardado | Estado |
-|---|---|---|
-| Notebooks | `.ipynb` | ✅ Soportado |
-| Data Pipelines | `.json` | ✅ Soportado |
-| Dataflows Gen2 | `.json` | ✅ Soportado |
-| Reports (Power BI) | PBIR (múltiples `.json`) | ✅ Soportado |
-| Semantic Models | `.bim` | ✅ Soportado* |
-| Lakehouses | `.json` (metadata) | ✅ Soportado |
-| KQL Databases | `.json` | ✅ Soportado |
-| Eventhouses | `.json` | ✅ Soportado |
-| Environments | `.json` | ✅ Soportado |
-| Spark Job Definitions | `.json` | ✅ Soportado |
-| Warehouses | Archivos vía OneLake ADLS | ✅ Soportado** |
+| Tipo de ítem | Formato guardado | Backup | Restore |
+|---|---|---|---|
+| Notebooks | `.ipynb` | ✅ | ✅ |
+| Data Pipelines | `.json` | ✅ | ✅ |
+| Dataflows Gen2 | `.json` | ✅ | ✅ |
+| Reports (Power BI) | PBIR (múltiples `.json`) | ✅ | ✅ |
+| Semantic Models | `.bim` | ✅* | ✅* |
+| Lakehouses | `.json` (metadata) | ✅ | ✅ (vacío) |
+| KQL Databases | `.json` | ✅ | ✅ |
+| Eventhouses | `.json` | ✅ | ✅ |
+| Environments | `.json` | ✅ | ✅ |
+| Spark Job Definitions | `.json` | ✅ | ✅ |
+| Warehouses | Archivos vía OneLake ADLS | ✅** | ❌*** |
 
-> \* Los Semantic Models requieren capacidad Premium para exportar.
-> \*\* Los Warehouses se descargan directamente desde OneLake (requiere el permiso `Azure Data Lake > user_impersonation` en el registro de la aplicación).
+> \* Los Semantic Models requieren capacidad Premium para exportar/importar.
+> \*\* Los Warehouses se descargan directamente desde OneLake (requiere `Azure Data Lake > user_impersonation`).
+> \*\*\* Los Warehouses no pueden recrearse vía API de Fabric; deben reconstruirse manualmente.
+
+### Novedades en v2.0.0
+
+- **Tab de Restauración:** nueva pestaña "↩ Restore" junto a la pestaña de Backup. Selecciona la carpeta raíz de backups y la app detecta automáticamente todos los backups disponibles.
+- **Selección de versión:** ComboBox con todos los backups encontrados (ordenados por fecha descendente). Selecciona el backup a restaurar.
+- **Ítems granulares:** lista de artefactos del backup con casillas de verificación. Los Warehouses aparecen deshabilitados con tooltip explicativo.
+- **Workspace destino:** elige un workspace existente o crea uno nuevo en el momento. Si creas uno nuevo, selecciona la capacidad Fabric (las Trial se preseleccionan automáticamente).
+- **Log y progreso:** misma experiencia que el backup — log en tiempo real con timestamps y barra de progreso.
+- **Cancelación:** botón de cancelar disponible en cualquier punto de la restauración.
 
 ### Novedades en v1.7.0
 
@@ -53,7 +63,7 @@ Se conecta al tenant de Microsoft Fabric/Power BI mediante la API REST oficial y
 
 ### Novedades en v1.5.0
 
-- **Interfaz bilingüe (ES / EN):** el botón **ES | EN** en la parte superior de la ventana cambia el idioma en tiempo real, sin reiniciar la aplicación. Todos los textos, mensajes y tooltips se actualizan al instante.
+- **Interfaz bilingüe (ES / EN):** el botón **ES | EN** en la parte superior de la ventana cambia el idioma en tiempo real, sin reiniciar la aplicación.
 - **Instalador mejorado:** ahora desinstala la versión anterior antes de instalar la nueva, evitando residuos de archivos.
 
 ### Instalación
@@ -75,9 +85,15 @@ La app usa autenticación delegada con MSAL. Necesitas registrar una aplicación
 4. Redirect URI: plataforma **Public client/native**, URI: `http://localhost`
 5. Click **Register** y copiar el **Application (client) ID**
 6. Ir a **API permissions** → **Add a permission** → **APIs my organization uses** → buscar **Power BI Service**
-7. Agregar permisos delegados: `Workspace.Read.All` y `Item.ReadAll` (o `Item.ReadWrite.All`)
+7. Agregar permisos delegados:
+   - `Workspace.Read.All` — para listar workspaces (backup)
+   - `Item.ReadAll` — para leer artefactos (backup)
+   - `Workspace.ReadWrite.All` — para crear workspaces y restaurar ítems (**nuevo en v2.0**)
+   - `Item.ReadWrite.All` — para crear ítems vía API (**nuevo en v2.0**)
 8. **Para backup de Warehouses:** agregar también **Azure Data Lake** → Delegated → `user_impersonation`
 9. Click **Grant admin consent**
+
+> **Nota:** Los permisos de escritura son necesarios solo para la funcionalidad de Restore. Si solo usas Backup, los permisos de lectura son suficientes.
 
 Una vez instalada la app, usa el botón **⚙** en el header para ingresar tu `ClientId` y `TenantId` sin editar archivos manualmente. Los valores se guardan en:
 
@@ -86,6 +102,8 @@ Una vez instalada la app, usa el botón **⚙** en el header para ingresar tu `C
 ```
 
 ### Cómo usar
+
+#### Backup
 
 **1. Iniciar sesión**
 Clic en **"Iniciar sesión"**. Se abre el navegador para autenticación con Microsoft. Una vez autenticado, la app carga los workspaces del tenant automáticamente.
@@ -120,6 +138,29 @@ Clic en **"▶ Iniciar Backup"**. El log muestra el progreso en tiempo real. Pue
             └── SparkJobDefinitions/
 ```
 
+#### Restore
+
+**1. Ir a la pestaña "↩ Restore"**
+Haz clic en la pestaña Restore en la parte superior de la ventana (disponible después de iniciar sesión).
+
+**2. Seleccionar la carpeta raíz de backups**
+Clic en **"Examinar..."** junto a "Carpeta raíz de backups". La app escanea la carpeta recursivamente y lista todos los backups encontrados en el ComboBox.
+
+**3. Elegir el backup**
+Selecciona el backup deseado en el ComboBox. La lista de ítems se carga automáticamente desde el `manifest.json`.
+
+**4. Seleccionar ítems a restaurar**
+Marca los ítems que quieres restaurar. Los Warehouses aparecen deshabilitados (no pueden restaurarse vía API).
+
+**5. Elegir el workspace destino**
+- **Workspace existente:** selecciónalo en el ComboBox.
+- **Workspace nuevo:** selecciona "＋ Nuevo workspace", ingresa el nombre y elige una capacidad Fabric.
+
+**6. Iniciar restauración**
+Clic en **"▶ Iniciar Restore"**. El log muestra el progreso ítem por ítem.
+
+> **Importante:** La restauración es en el mismo tenant. Si un ítem ya existe en el workspace destino, se producirá un error 409 (Conflict) para ese ítem; los demás continúan.
+
 ### Logs
 
 ```
@@ -135,6 +176,8 @@ Clic en **"▶ Iniciar Backup"**. El log muestra el progreso en tiempo real. Pue
 | `LRO failed: Dataset Workload...` | Semantic Model sin capacidad Premium o capacidad pausada | Se necesita capacidad Premium F SKU activa |
 | `401 Unauthorized` | Token expirado o permisos insuficientes | Cierra la sesión y vuelve a autenticarte |
 | `403 Forbidden` | Sin acceso al workspace | Pide al administrador que te agregue |
+| `409 Conflict` al restaurar | El ítem ya existe en el workspace destino | Elimina el ítem del workspace destino o elige otro workspace |
+| `CreateItem failed (403)` al restaurar | Faltan permisos de escritura | Agregar `Workspace.ReadWrite.All` e `Item.ReadWrite.All` → Grant admin consent |
 | `Timeout en LRO polling` | Ítem muy grande o capacidad cargada | Aumentar `LROPollingInterval` en la configuración |
 
 ### Compilar desde código fuente
@@ -155,17 +198,18 @@ powershell -ExecutionPolicy Bypass -File installer/GenerateFiles.ps1
 dotnet build installer/wix/FabricBackupLite.wixproj -c Release
 ```
 
-### Limitaciones conocidas (v1.7)
+### Limitaciones conocidas (v2.0)
 
-- ❌ Solo backup, no restore — está en el roadmap
 - ❌ No incremental — siempre backup completo
 - ❌ No scheduling — ejecución manual
+- ❌ Los Warehouses no se pueden restaurar vía API (requieren recreación manual)
+- ⚠️ La restauración es siempre en el mismo tenant (característica "Lite")
 - ⚠️ Semantic Models requieren capacidad Premium F SKU activa
 - ⚠️ Warehouses requieren permiso adicional `Azure Data Lake > user_impersonation`
 
 ### Roadmap
 
-- [ ] Restore de artefactos
+- [x] Restore de artefactos — ✅ v2.0.0
 - [ ] Backup incremental
 - [ ] Scheduling automático (Windows Task Scheduler)
 - [ ] CLI para pipelines CI/CD
@@ -195,28 +239,38 @@ MIT © 2026 [Walter Calcagno](mailto:Walter@inegocios.cl)
 
 ## English
 
-Free backup tool for **Microsoft Fabric** and **Power BI**, with an MSI installer for Windows.
+Free **backup and restore** tool for **Microsoft Fabric** and **Power BI**, with an MSI installer for Windows.
 
 ### What does it do?
 
-It connects to your Microsoft Fabric/Power BI tenant through the official REST API and downloads artifact definitions to local folders, preserving structure and metadata.
+It connects to your Microsoft Fabric/Power BI tenant through the official REST API and downloads artifact definitions to local folders, preserving structure and metadata. Starting with v2.0.0 it can also restore those artifacts to any workspace in the same tenant.
 
-| Item type | Saved format | Status |
-|---|---|---|
-| Notebooks | `.ipynb` | ✅ Supported |
-| Data Pipelines | `.json` | ✅ Supported |
-| Dataflows Gen2 | `.json` | ✅ Supported |
-| Reports (Power BI) | PBIR (multiple `.json`) | ✅ Supported |
-| Semantic Models | `.bim` | ✅ Supported* |
-| Lakehouses | `.json` (metadata) | ✅ Supported |
-| KQL Databases | `.json` | ✅ Supported |
-| Eventhouses | `.json` | ✅ Supported |
-| Environments | `.json` | ✅ Supported |
-| Spark Job Definitions | `.json` | ✅ Supported |
-| Warehouses | Files via OneLake ADLS | ✅ Supported** |
+| Item type | Saved format | Backup | Restore |
+|---|---|---|---|
+| Notebooks | `.ipynb` | ✅ | ✅ |
+| Data Pipelines | `.json` | ✅ | ✅ |
+| Dataflows Gen2 | `.json` | ✅ | ✅ |
+| Reports (Power BI) | PBIR (multiple `.json`) | ✅ | ✅ |
+| Semantic Models | `.bim` | ✅* | ✅* |
+| Lakehouses | `.json` (metadata) | ✅ | ✅ (empty) |
+| KQL Databases | `.json` | ✅ | ✅ |
+| Eventhouses | `.json` | ✅ | ✅ |
+| Environments | `.json` | ✅ | ✅ |
+| Spark Job Definitions | `.json` | ✅ | ✅ |
+| Warehouses | Files via OneLake ADLS | ✅** | ❌*** |
 
-> \* Semantic Models require Premium capacity to export.
-> \*\* Warehouses are downloaded directly from OneLake (requires the `Azure Data Lake > user_impersonation` permission on the app registration).
+> \* Semantic Models require Premium capacity to export/import.
+> \*\* Warehouses are downloaded directly from OneLake (requires `Azure Data Lake > user_impersonation`).
+> \*\*\* Warehouses cannot be recreated via Fabric API; they must be rebuilt manually.
+
+### What's new in v2.0.0
+
+- **Restore tab:** new "↩ Restore" tab alongside the Backup tab. Select the backup root folder and the app auto-detects all available backups.
+- **Version picker:** ComboBox listing all discovered backups (sorted by date, newest first). Select the one you want to restore.
+- **Granular item selection:** checklist of artifacts from the backup. Warehouses appear disabled with an explanatory tooltip.
+- **Destination workspace:** choose an existing workspace or create a new one on the fly. If creating new, pick the Fabric capacity (Trial capacities are pre-selected automatically).
+- **Log and progress:** same experience as backup — real-time log with timestamps and a progress bar.
+- **Cancellation:** cancel button available at any point during the restore.
 
 ### What's new in v1.7.0
 
@@ -228,7 +282,7 @@ It connects to your Microsoft Fabric/Power BI tenant through the official REST A
 
 ### What's new in v1.5.0
 
-- **Bilingual UI (ES / EN):** the **ES | EN** button at the top of the window switches the language in real time, without restarting the application. All texts, messages and tooltips update instantly.
+- **Bilingual UI (ES / EN):** the **ES | EN** button at the top of the window switches the language in real time, without restarting the application.
 - **Improved installer:** now uninstalls the previous version before installing the new one, preventing leftover files.
 
 ### Installation
@@ -250,9 +304,15 @@ The app uses delegated authentication with MSAL. You need to register an applica
 4. Redirect URI: platform **Public client/native**, URI: `http://localhost`
 5. Click **Register** and copy the **Application (client) ID**
 6. Go to **API permissions** → **Add a permission** → **APIs my organization uses** → search for **Power BI Service**
-7. Add delegated permissions: `Workspace.Read.All` and `Item.ReadAll` (or `Item.ReadWrite.All`)
+7. Add delegated permissions:
+   - `Workspace.Read.All` — to list workspaces (backup)
+   - `Item.ReadAll` — to read artifacts (backup)
+   - `Workspace.ReadWrite.All` — to create workspaces and restore items (**new in v2.0**)
+   - `Item.ReadWrite.All` — to create items via API (**new in v2.0**)
 8. **For Warehouse backup:** also add **Azure Data Lake** → Delegated → `user_impersonation`
 9. Click **Grant admin consent**
+
+> **Note:** Write permissions are only required for the Restore feature. If you only use Backup, read permissions are sufficient.
 
 Once the app is installed, use the **⚙** button in the header to enter your `ClientId` and `TenantId` without editing files manually. Values are saved to:
 
@@ -261,6 +321,8 @@ Once the app is installed, use the **⚙** button in the header to enter your `C
 ```
 
 ### How to use
+
+#### Backup
 
 **1. Sign in**
 Click **"Sign In"**. A browser window opens for Microsoft authentication. Once authenticated, the app automatically loads all workspaces in the tenant.
@@ -295,6 +357,29 @@ Click **"▶ Start Backup"**. The activity log shows progress in real time. You 
             └── SparkJobDefinitions/
 ```
 
+#### Restore
+
+**1. Go to the "↩ Restore" tab**
+Click the Restore tab at the top of the window (available after signing in).
+
+**2. Select the backup root folder**
+Click **"Browse..."** next to "Backup root folder". The app scans the folder recursively and lists all discovered backups in the ComboBox.
+
+**3. Choose a backup**
+Select the desired backup from the ComboBox. The item list is loaded automatically from the `manifest.json`.
+
+**4. Select items to restore**
+Check the items you want to restore. Warehouses appear disabled (cannot be restored via API).
+
+**5. Choose the destination workspace**
+- **Existing workspace:** select it from the ComboBox.
+- **New workspace:** select "＋ New workspace", enter a name, and choose a Fabric capacity.
+
+**6. Start restore**
+Click **"▶ Start Restore"**. The log shows progress item by item.
+
+> **Important:** Restore is same-tenant only. If an item already exists in the destination workspace, a 409 (Conflict) error will occur for that item; other items continue normally.
+
 ### Logs
 
 ```
@@ -310,6 +395,8 @@ Click **"▶ Start Backup"**. The activity log shows progress in real time. You 
 | `LRO failed: Dataset Workload...` | Semantic Model without Premium capacity or paused capacity | Active Premium F SKU capacity is required |
 | `401 Unauthorized` | Expired token or insufficient permissions | Sign out and sign in again |
 | `403 Forbidden` | No access to the workspace | Ask the workspace administrator to add you |
+| `409 Conflict` on restore | Item already exists in destination workspace | Remove the item from the destination workspace or choose a different one |
+| `CreateItem failed (403)` on restore | Missing write permissions | Add `Workspace.ReadWrite.All` and `Item.ReadWrite.All` → Grant admin consent |
 | `Timeout in LRO polling` | Very large item or busy capacity | Increase `LROPollingInterval` in Settings |
 
 ### Build from source
@@ -330,17 +417,18 @@ powershell -ExecutionPolicy Bypass -File installer/GenerateFiles.ps1
 dotnet build installer/wix/FabricBackupLite.wixproj -c Release
 ```
 
-### Known limitations (v1.7)
+### Known limitations (v2.0)
 
-- ❌ Backup only, no restore — on the roadmap
 - ❌ No incremental backup — always full backup
 - ❌ No scheduling — manual execution
+- ❌ Warehouses cannot be restored via API (manual rebuild required)
+- ⚠️ Restore is same-tenant only ("Lite" characteristic)
 - ⚠️ Semantic Models require active Premium F SKU capacity
 - ⚠️ Warehouses require additional `Azure Data Lake > user_impersonation` permission
 
 ### Roadmap
 
-- [ ] Artifact restore
+- [x] Artifact restore — ✅ v2.0.0
 - [ ] Incremental backup
 - [ ] Automatic scheduling (Windows Task Scheduler)
 - [ ] CLI for CI/CD pipelines
