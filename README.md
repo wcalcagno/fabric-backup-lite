@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?logo=windows" alt="Windows"/>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"/>
-  <img src="https://img.shields.io/badge/version-2.1.0-blue" alt="v2.1.0"/>
+  <img src="https://img.shields.io/badge/version-2.2.0-blue" alt="v2.2.0"/>
   <img src="https://img.shields.io/badge/lang-ES%20%7C%20EN-orange" alt="ES | EN"/>
 </p>
 
@@ -33,16 +33,32 @@ Se conecta al tenant de Microsoft Fabric/Power BI mediante la API REST oficial y
 | Dataflows Gen2 | `.json` | ✅ | ✅ |
 | Reports (Power BI) | PBIR (múltiples `.json`) | ✅ | ✅ |
 | Semantic Models | `.bim` | ✅* | ✅* |
-| Lakehouses | `.json` (metadata) | ✅ | ✅ (vacío) |
+| Lakehouses | `.json` (metadata) + datos OneLake opcional | ✅ | ✅ (vacío) |
 | KQL Databases | `.json` | ✅ | ✅ |
 | Eventhouses | `.json` | ✅ | ✅ |
 | Environments | `.json` | ✅ | ✅ |
 | Spark Job Definitions | `.json` | ✅ | ✅ |
+| Eventstreams | `.json` | ✅ | ✅ |
+| Data Activators (Reflex) | `.json` | ✅ | ✅ |
+| Variable Libraries | `.json` | ✅ | ✅ |
+| Mirrored Databases | `.json` (config) | ✅ | ✅ |
+| KQL Dashboards | `.json` | ✅ | ✅ |
+| KQL Querysets | `.json` | ✅ | ✅ |
+| GraphQL APIs | `.json` | ✅ | ✅ |
+| Copy Jobs | `.json` | ✅ | ✅ |
+| Paginated Reports | `.rdl` | ✅ | ✅ |
 | Warehouses | Archivos vía OneLake ADLS | ✅** | ❌*** |
 
 > \* Los Semantic Models requieren capacidad Premium para exportar/importar.
 > \*\* Los Warehouses se descargan directamente desde OneLake (requiere `Azure Data Lake > user_impersonation`).
 > \*\*\* Los Warehouses no pueden recrearse vía API de Fabric; deben reconstruirse manualmente.
+
+### Novedades en v2.2.0
+
+- **+9 tipos de ítem** vía el endpoint genérico de definición de Fabric: **Eventstream, Data Activator (Reflex), Variable Library, Mirrored Database, KQL Dashboard, KQL Queryset, GraphQL API, Copy Job, Paginated Report**. Backup y restore completos.
+- **Endpoints genéricos + a prueba de futuro:** el backup/restore ahora usa `POST /items/{id}/getDefinition` y `POST /items` (Core API), así que los tipos nuevos que agregue Microsoft quedan cubiertos automáticamente, sin tocar código.
+- **Datos de Lakehouse (opt-in):** nuevo checkbox "Incluir datos de Lakehouse" que descarga las tablas Delta + Files desde OneLake durante el backup (apagado por defecto; puede ser muy grande). El restore crea el Lakehouse vacío.
+- **Metadata de workspace:** cada backup guarda un sidecar `_workspace/` con `workspace.json`, `roleAssignments.json`, `sparkSettings.json` y `connections.json` (metadata, nunca secretos) para guiar el restore/rebind.
 
 ### Novedades en v2.1.0
 
@@ -258,16 +274,32 @@ It connects to your Microsoft Fabric/Power BI tenant through the official REST A
 | Dataflows Gen2 | `.json` | ✅ | ✅ |
 | Reports (Power BI) | PBIR (multiple `.json`) | ✅ | ✅ |
 | Semantic Models | `.bim` | ✅* | ✅* |
-| Lakehouses | `.json` (metadata) | ✅ | ✅ (empty) |
+| Lakehouses | `.json` (metadata) + optional OneLake data | ✅ | ✅ (empty) |
 | KQL Databases | `.json` | ✅ | ✅ |
 | Eventhouses | `.json` | ✅ | ✅ |
 | Environments | `.json` | ✅ | ✅ |
 | Spark Job Definitions | `.json` | ✅ | ✅ |
+| Eventstreams | `.json` | ✅ | ✅ |
+| Data Activators (Reflex) | `.json` | ✅ | ✅ |
+| Variable Libraries | `.json` | ✅ | ✅ |
+| Mirrored Databases | `.json` (config) | ✅ | ✅ |
+| KQL Dashboards | `.json` | ✅ | ✅ |
+| KQL Querysets | `.json` | ✅ | ✅ |
+| GraphQL APIs | `.json` | ✅ | ✅ |
+| Copy Jobs | `.json` | ✅ | ✅ |
+| Paginated Reports | `.rdl` | ✅ | ✅ |
 | Warehouses | Files via OneLake ADLS | ✅** | ❌*** |
 
 > \* Semantic Models require Premium capacity to export/import.
 > \*\* Warehouses are downloaded directly from OneLake (requires `Azure Data Lake > user_impersonation`).
 > \*\*\* Warehouses cannot be recreated via Fabric API; they must be rebuilt manually.
+
+### What's new in v2.2.0
+
+- **+9 item types** via Fabric's generic definition endpoint: **Eventstream, Data Activator (Reflex), Variable Library, Mirrored Database, KQL Dashboard, KQL Queryset, GraphQL API, Copy Job, Paginated Report**. Full backup and restore.
+- **Generic + future-proof endpoints:** backup/restore now use `POST /items/{id}/getDefinition` and `POST /items` (Core API), so new item types Microsoft adds are covered automatically, with no code changes.
+- **Lakehouse data (opt-in):** a new "Include Lakehouse data" checkbox downloads the Delta tables + Files from OneLake during backup (off by default; can be very large). Restore creates the Lakehouse empty.
+- **Workspace metadata:** every backup saves a `_workspace/` sidecar with `workspace.json`, `roleAssignments.json`, `sparkSettings.json` and `connections.json` (metadata, never secrets) to guide restore/rebind.
 
 ### What's new in v2.1.0
 

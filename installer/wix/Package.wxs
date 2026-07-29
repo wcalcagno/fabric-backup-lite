@@ -3,7 +3,7 @@
 
   <Package Name="Fabric Backup Lite"
            Manufacturer="WeData"
-           Version="2.1.0"
+           Version="2.2.0"
            UpgradeCode="B7E4A3F1-2C6D-4E8B-9F5A-1D3C7B0E5A2F"
            Scope="perMachine">
 
