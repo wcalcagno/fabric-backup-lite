@@ -111,21 +111,15 @@ public class FabricApiClient : IFabricApiClient
         FabricItemType itemType,
         CancellationToken cancellationToken = default)
     {
-        // Each Fabric item type has its own endpoint — the generic /items/{id}/getDefinition does not exist
-        var typeSegment = GetTypeSegment(itemType)
-            ?? throw new NotSupportedException(
-                $"El tipo '{itemType}' no tiene endpoint de exportación en la API de Fabric.");
-
-        // Notebooks require ?format=ipynb to get a standard Jupyter file.
+        // Generic Core endpoint: works for ANY item type that supports the definition API,
+        // so we don't have to hard-code a REST path segment per type. New Fabric item types
+        // added by Microsoft are covered automatically. Types with no definition API (Warehouse)
+        // are routed to OneLake by BackupService before reaching here.
+        // Notebooks use ?format=ipynb for a portable Jupyter file.
         // Lakehouses require ?format=LakehouseDefinitionV1 (otherwise returns 400).
-        // Reports use PBIR format (multiple JSON parts) by default — no format param needed.
-        var formatQuery = itemType switch
-        {
-            FabricItemType.Notebook  => "?format=ipynb",
-            FabricItemType.Lakehouse => "?format=LakehouseDefinitionV1",
-            _                        => string.Empty
-        };
-        var url = $"workspaces/{workspaceId}/{typeSegment}/{itemId}/getDefinition{formatQuery}";
+        // Reports (PBIR) and Semantic Models (TMDL) use their default multi-part format.
+        var formatQuery = GetDefinitionFormatQuery(itemType);
+        var url = $"workspaces/{workspaceId}/items/{itemId}/getDefinition{formatQuery}";
         _logger.LogInformation("Getting definition for item {ItemId} ({Type}) via {Url}", itemId, itemType, url);
 
         // 1. Iniciar LRO con POST
@@ -272,15 +266,18 @@ public class FabricApiClient : IFabricApiClient
         List<(byte[] content, string partPath)> parts,
         CancellationToken cancellationToken = default)
     {
-        var typeSegment = GetTypeSegment(itemType)
-            ?? throw new NotSupportedException($"Item type '{itemType}' is not supported for restore.");
+        // Exact Fabric API type string. Enum member names are kept identical to the API's
+        // `type` values, so ToString() is the correct wire value for the generic create endpoint.
+        var apiType = itemType.ToString();
 
         _logger.LogInformation("Creating {Type} '{Name}' in workspace {WorkspaceId}", itemType, displayName, workspaceId);
 
         object bodyObj;
         if (itemType == FabricItemType.Lakehouse)
         {
-            bodyObj = new { displayName };
+            // Lakehouse is created empty — its definition holds only schema/shortcuts metadata,
+            // and the data lives in OneLake (handled separately).
+            bodyObj = new { displayName, type = apiType };
         }
         else
         {
@@ -292,13 +289,15 @@ public class FabricApiClient : IFabricApiClient
             }).ToArray();
 
             if (itemType == FabricItemType.Notebook)
-                bodyObj = new { displayName, definition = new { format = "ipynb", parts = partsArray } };
+                bodyObj = new { displayName, type = apiType, definition = new { format = "ipynb", parts = partsArray } };
             else
-                bodyObj = new { displayName, definition = new { parts = partsArray } };
+                bodyObj = new { displayName, type = apiType, definition = new { parts = partsArray } };
         }
 
         var body    = JsonSerializer.Serialize(bodyObj);
-        var url     = $"workspaces/{workspaceId}/{typeSegment}";
+        // Generic Core endpoint — the `type` field in the body selects the item type,
+        // so any definition-supporting type can be restored without a per-type route.
+        var url     = $"workspaces/{workspaceId}/items";
         var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json")
@@ -373,21 +372,13 @@ public class FabricApiClient : IFabricApiClient
         }
     }
 
-    // Maps FabricItemType to the Fabric REST API path segment for that item type.
-    // Returns null for types that do not expose a getDefinition endpoint.
-    private static string? GetTypeSegment(FabricItemType type) => type switch
+    // Only a handful of item types accept a ?format= param on getDefinition; the rest use
+    // their single implicit format. Returns the query string ("?format=...") or "".
+    private static string GetDefinitionFormatQuery(FabricItemType type) => type switch
     {
-        FabricItemType.Notebook          => "notebooks",
-        FabricItemType.DataPipeline      => "dataPipelines",
-        FabricItemType.Report            => "reports",
-        FabricItemType.SemanticModel     => "semanticModels",
-        FabricItemType.Dataflow          => "dataflows",
-        FabricItemType.Lakehouse         => "lakehouses",
-        FabricItemType.KQLDatabase       => "kqldatabases",
-        FabricItemType.Eventhouse        => "eventhouses",
-        FabricItemType.Environment       => "environments",
-        FabricItemType.SparkJobDefinition => "sparkJobDefinitions",
-        _                                => null   // Warehouse, Unknown
+        FabricItemType.Notebook  => "?format=ipynb",
+        FabricItemType.Lakehouse => "?format=LakehouseDefinitionV1",
+        _                        => string.Empty
     };
 
     // Returns one entry per definition part: (decoded bytes, relative path as declared by the API).
@@ -435,27 +426,16 @@ public class FabricApiClient : IFabricApiClient
         FabricItemType.Eventhouse        => ".json",
         FabricItemType.Environment       => ".json",
         FabricItemType.SparkJobDefinition => ".json",
+        FabricItemType.PaginatedReport   => ".rdl",
         _                                => ".json"
     };
 
-    private FabricItemType ParseItemType(string type)
-    {
-        return type?.ToLowerInvariant() switch
-        {
-            "report"             => FabricItemType.Report,
-            "semanticmodel"      => FabricItemType.SemanticModel,
-            "notebook"           => FabricItemType.Notebook,
-            "datapipeline"       => FabricItemType.DataPipeline,
-            "dataflow"           => FabricItemType.Dataflow,
-            "lakehouse"          => FabricItemType.Lakehouse,
-            "warehouse"          => FabricItemType.Warehouse,
-            "kqldatabase"        => FabricItemType.KQLDatabase,
-            "eventhouse"         => FabricItemType.Eventhouse,
-            "environment"        => FabricItemType.Environment,
-            "sparkjobdefinition" => FabricItemType.SparkJobDefinition,
-            _                    => FabricItemType.Unknown
-        };
-    }
+    // Enum member names are kept identical to Fabric's API `type` strings, so a case-insensitive
+    // Enum.TryParse maps every known (and future-added) type without a hand-maintained switch.
+    private static FabricItemType ParseItemType(string type) =>
+        Enum.TryParse<FabricItemType>(type, ignoreCase: true, out var parsed)
+            ? parsed
+            : FabricItemType.Unknown;
 
     private async Task AddAuthHeaderAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {

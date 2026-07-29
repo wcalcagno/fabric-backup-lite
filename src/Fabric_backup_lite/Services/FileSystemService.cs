@@ -35,20 +35,12 @@ public class FileSystemService
         Directory.CreateDirectory(backupPath);
         _logger.LogInformation("Created backup directory: {Path}", backupPath);
 
-        // Crear subdirectorios por tipo
-        var subDirs = new[] {
-            "Reports",
-            "SemanticModels",
-            "Notebooks",
-            "Pipelines",
-            "Dataflows",
-            "Lakehouses",
-            "Warehouses",
-            "KQLDatabases",
-            "Eventhouses",
-            "Environments",
-            "SparkJobDefinitions"
-        };
+        // Crear subdirectorios por tipo. Derivado del enum vía el catálogo central para que
+        // nunca se desincronice cuando se agregan tipos nuevos.
+        var subDirs = Enum.GetValues<FabricItemType>()
+            .Where(t => t != FabricItemType.Unknown)
+            .Select(FabricItemCatalog.SubFolder)
+            .Distinct();
 
         foreach (var subDir in subDirs)
         {
@@ -132,24 +124,7 @@ public class FileSystemService
         return string.IsNullOrWhiteSpace(sanitized) ? "unnamed" : sanitized;
     }
 
-    public string GetSubFolderForType(FabricItemType type)
-    {
-        return type switch
-        {
-            FabricItemType.Report            => "Reports",
-            FabricItemType.SemanticModel     => "SemanticModels",
-            FabricItemType.Notebook          => "Notebooks",
-            FabricItemType.DataPipeline      => "Pipelines",
-            FabricItemType.Dataflow          => "Dataflows",
-            FabricItemType.Lakehouse         => "Lakehouses",
-            FabricItemType.Warehouse         => "Warehouses",
-            FabricItemType.KQLDatabase       => "KQLDatabases",
-            FabricItemType.Eventhouse        => "Eventhouses",
-            FabricItemType.Environment       => "Environments",
-            FabricItemType.SparkJobDefinition => "SparkJobDefinitions",
-            _                                => "Other"
-        };
-    }
+    public string GetSubFolderForType(FabricItemType type) => FabricItemCatalog.SubFolder(type);
 
     private bool IsFileLocked(FileInfo file)
     {

@@ -220,35 +220,9 @@ public class RestoreService : IRestoreService
     }
 
     private static FabricItemType ParseItemType(string type) =>
-        type?.ToLowerInvariant() switch
-        {
-            "report"             => FabricItemType.Report,
-            "semanticmodel"      => FabricItemType.SemanticModel,
-            "notebook"           => FabricItemType.Notebook,
-            "datapipeline"       => FabricItemType.DataPipeline,
-            "dataflow"           => FabricItemType.Dataflow,
-            "lakehouse"          => FabricItemType.Lakehouse,
-            "warehouse"          => FabricItemType.Warehouse,
-            "kqldatabase"        => FabricItemType.KQLDatabase,
-            "eventhouse"         => FabricItemType.Eventhouse,
-            "environment"        => FabricItemType.Environment,
-            "sparkjobdefinition" => FabricItemType.SparkJobDefinition,
-            _                    => FabricItemType.Unknown
-        };
+        Enum.TryParse<FabricItemType>(type, ignoreCase: true, out var parsed)
+            ? parsed
+            : FabricItemType.Unknown;
 
-    private static string GetItemIcon(FabricItemType type) => type switch
-    {
-        FabricItemType.Report             => "📈",
-        FabricItemType.SemanticModel      => "🔷",
-        FabricItemType.Notebook           => "📓",
-        FabricItemType.DataPipeline       => "🔄",
-        FabricItemType.Dataflow           => "💧",
-        FabricItemType.Lakehouse          => "🏠",
-        FabricItemType.Warehouse          => "🏭",
-        FabricItemType.KQLDatabase        => "🔍",
-        FabricItemType.Eventhouse         => "⚡",
-        FabricItemType.Environment        => "🌐",
-        FabricItemType.SparkJobDefinition => "✨",
-        _                                 => "📄"
-    };
+    private static string GetItemIcon(FabricItemType type) => FabricItemCatalog.Icon(type);
 }

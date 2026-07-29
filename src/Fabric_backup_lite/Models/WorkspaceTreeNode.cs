@@ -190,21 +190,7 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
             IsUnsupported = ItemTypeIsUnsupported(type)
         };
 
-    private static string GetTypePluralName(FabricItemType type) => type switch
-    {
-        FabricItemType.Report             => "Reports",
-        FabricItemType.SemanticModel      => "Semantic Models",
-        FabricItemType.Notebook           => "Notebooks",
-        FabricItemType.DataPipeline       => "Data Pipelines",
-        FabricItemType.Dataflow           => "Dataflows",
-        FabricItemType.Lakehouse          => "Lakehouses",
-        FabricItemType.Warehouse          => "Warehouses",
-        FabricItemType.KQLDatabase        => "KQL Databases",
-        FabricItemType.Eventhouse         => "Eventhouses",
-        FabricItemType.Environment        => "Environments",
-        FabricItemType.SparkJobDefinition => "Spark Job Definitions",
-        _                                 => "Other"
-    };
+    private static string GetTypePluralName(FabricItemType type) => FabricItemCatalog.PluralName(type);
 
     public static WorkspaceTreeNode CreateItem(FabricItem item, WorkspaceTreeNode parent)
     {
@@ -222,19 +208,5 @@ public class WorkspaceTreeNode : INotifyPropertyChanged
         };
     }
 
-    private static string GetItemIcon(FabricItemType type) => type switch
-    {
-        FabricItemType.Report             => "📈",
-        FabricItemType.SemanticModel      => "🔷",
-        FabricItemType.Notebook           => "📓",
-        FabricItemType.DataPipeline       => "🔄",
-        FabricItemType.Dataflow           => "💧",
-        FabricItemType.Lakehouse          => "🏠",
-        FabricItemType.Warehouse          => "🏭",
-        FabricItemType.KQLDatabase        => "🔍",
-        FabricItemType.Eventhouse         => "⚡",
-        FabricItemType.Environment        => "🌐",
-        FabricItemType.SparkJobDefinition => "✨",
-        _                                 => "📄"
-    };
+    private static string GetItemIcon(FabricItemType type) => FabricItemCatalog.Icon(type);
 }
