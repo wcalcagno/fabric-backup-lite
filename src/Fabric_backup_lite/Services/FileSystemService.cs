@@ -81,6 +81,29 @@ public class FileSystemService
         return Path.Combine(subFolder, itemFolder);
     }
 
+    /// <summary>
+    /// Writes workspace-level metadata sidecar files (settings, role assignments, connections)
+    /// into a "_workspace" folder under the backup root. Each entry is { fileName => rawJson }.
+    /// </summary>
+    public async Task SaveWorkspaceMetadataAsync(
+        string backupPath,
+        Dictionary<string, string> metadata,
+        CancellationToken cancellationToken = default)
+    {
+        if (metadata.Count == 0)
+            return;
+
+        var folder = Path.Combine(backupPath, "_workspace");
+        Directory.CreateDirectory(folder);
+
+        foreach (var (fileName, json) in metadata)
+        {
+            var path = Path.Combine(folder, fileName);
+            await File.WriteAllTextAsync(path, json, Encoding.UTF8, cancellationToken);
+            _logger.LogInformation("Saved workspace metadata: {Path}", path);
+        }
+    }
+
     public async Task SaveManifestAsync(
         string backupPath,
         BackupMetadata metadata,

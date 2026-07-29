@@ -380,6 +380,20 @@ public class BackupService : IBackupService
                 }
             }
 
+            // Capture workspace-level metadata (settings, role assignments, connections) as
+            // sidecar JSON. Best-effort and non-fatal — useful for restore/rebind guidance.
+            try
+            {
+                ReportProgress(progress, total, completed, workspaceName, L.SavingWorkspaceMetadata);
+                var wsMetadata = await _fabricClient.GetWorkspaceMetadataJsonAsync(workspaceId, cancellationToken);
+                await _fileSystem.SaveWorkspaceMetadataAsync(backupPath, wsMetadata, cancellationToken);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not capture workspace metadata for {Workspace}", workspaceName);
+            }
+
             var metadata = new BackupMetadata
             {
                 Timestamp     = DateTime.UtcNow,

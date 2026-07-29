@@ -54,6 +54,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     // ---- Activity log ----
     public string ActivityLogLabel => IsSpanish ? "Log de actividad" : "Activity log";
+    public string SavingWorkspaceMetadata => IsSpanish
+        ? "Guardando metadata del workspace (settings, roles, conexiones)..."
+        : "Saving workspace metadata (settings, roles, connections)...";
 
     // ---- Action buttons ----
     public string StartBackupButton => IsSpanish ? "▶  Iniciar Backup" : "▶  Start Backup";

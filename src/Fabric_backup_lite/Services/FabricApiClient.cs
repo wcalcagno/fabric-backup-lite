@@ -105,6 +105,59 @@ public class FabricApiClient : IFabricApiClient
         return items;
     }
 
+    public async Task<Dictionary<string, string>> GetWorkspaceMetadataJsonAsync(
+        string workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        // Each entry is captured best-effort; a failure (often InsufficientScopes or a
+        // capacity-less workspace) is logged and skipped so it never fails the backup.
+        var endpoints = new (string file, string url)[]
+        {
+            ("workspace.json",         $"workspaces/{workspaceId}"),
+            ("roleAssignments.json",   $"workspaces/{workspaceId}/roleAssignments"),
+            ("sparkSettings.json",     $"workspaces/{workspaceId}/spark/settings"),
+            // Connections are tenant-scoped metadata (no secrets are ever returned); useful for
+            // re-binding data sources after a cross-workspace restore.
+            ("connections.json",       "connections"),
+        };
+
+        var result = new Dictionary<string, string>();
+
+        foreach (var (file, url) in endpoints)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var json = await TryGetRawJsonAsync(url, cancellationToken);
+            if (json != null)
+                result[file] = json;
+        }
+
+        return result;
+    }
+
+    // GET that returns the response body on success, or null on any non-success/exception.
+    private async Task<string?> TryGetRawJsonAsync(string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            await AddAuthHeaderAsync(request, cancellationToken);
+
+            var response = await ExecuteWithRetryAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Workspace metadata GET {Url} → {Status} (skipped)", url, (int)response.StatusCode);
+                return null;
+            }
+
+            return await response.Content.ReadAsStringAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Workspace metadata GET {Url} failed (skipped)", url);
+            return null;
+        }
+    }
+
     public async Task<List<(byte[] content, string partPath)>> GetItemDefinitionAsync(
         string workspaceId,
         string itemId,

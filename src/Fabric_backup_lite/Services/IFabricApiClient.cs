@@ -12,6 +12,13 @@ public interface IFabricApiClient
         FabricItemType itemType,
         CancellationToken cancellationToken = default);
 
+    // Workspace-level metadata worth capturing alongside item definitions.
+    // Returns a map of { sidecarFileName => rawJson }; endpoints that fail (e.g. lacking
+    // permission) are skipped rather than aborting the backup.
+    Task<Dictionary<string, string>> GetWorkspaceMetadataJsonAsync(
+        string workspaceId,
+        CancellationToken cancellationToken = default);
+
     // Restore operations
     Task<List<FabricCapacity>> GetCapacitiesAsync(CancellationToken cancellationToken = default);
     Task<Workspace> CreateWorkspaceAsync(string displayName, string capacityId, CancellationToken cancellationToken = default);
