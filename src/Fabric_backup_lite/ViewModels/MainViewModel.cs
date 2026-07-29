@@ -57,6 +57,13 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    private bool _includeLakehouseData;
+    public bool IncludeLakehouseData
+    {
+        get => _includeLakehouseData;
+        set => SetProperty(ref _includeLakehouseData, value);
+    }
+
     private ObservableCollection<string> _logMessages = new();
     public ObservableCollection<string> LogMessages
     {
@@ -439,7 +446,8 @@ public class MainViewModel : ViewModelBase
                 checkedItems,
                 DestinationPath,
                 progress,
-                _cancellationTokenSource.Token);
+                _cancellationTokenSource.Token,
+                IncludeLakehouseData);
 
             if (result.Success)
             {

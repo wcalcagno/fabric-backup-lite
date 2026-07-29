@@ -447,10 +447,10 @@
                 </Grid.RowDefinitions>
 
 
-                <!-- Row 0: Carpeta de destino                            -->
+                <!-- Row 0: Destino + opción de datos de Lakehouse        -->
 
-                <Border Grid.Row="0"
-                        Background="{StaticResource SurfaceBrush}"
+                <StackPanel Grid.Row="0">
+                <Border Background="{StaticResource SurfaceBrush}"
                         BorderBrush="{StaticResource BorderBrush_}"
                         BorderThickness="1"
                         CornerRadius="8"
@@ -492,6 +492,14 @@
                                 Margin="12,0,0,0"/>
                     </Grid>
                 </Border>
+
+                <!-- Opt-in: include Lakehouse table/file data (can be large) -->
+                <CheckBox Content="{Binding L.IncludeLakehouseDataLabel}"
+                          IsChecked="{Binding IncludeLakehouseData, Mode=TwoWay}"
+                          FontSize="12"
+                          Foreground="{StaticResource TextMutedBrush}"
+                          Margin="4,0,0,12"/>
+                </StackPanel>
 
 
                 <!-- Row 1: Log                                           -->

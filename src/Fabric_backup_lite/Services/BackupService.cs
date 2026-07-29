@@ -241,7 +241,8 @@ public class BackupService : IBackupService
         IList<(string workspaceId, string workspaceName, FabricItem item)> selectedItems,
         string destinationPath,
         IProgress<BackupProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeLakehouseData = false)
     {
         if (selectedItems.Count == 0)
         {
@@ -309,6 +310,22 @@ public class BackupService : IBackupService
 
                         relativePath = await _fileSystem.SaveItemDefinitionAsync(
                             backupPath, item, parts, cancellationToken);
+
+                        // Opt-in: the getDefinition above captures only the Lakehouse schema/shortcuts
+                        // (metadata). When requested, also pull the actual Tables/ + Files/ data from
+                        // OneLake. This can be very large, hence off by default.
+                        if (includeLakehouseData && item.Type == FabricItemType.Lakehouse)
+                        {
+                            var dataProgress = new Progress<string>(msg =>
+                                ReportProgress(progress, total, completed, item.DisplayName, msg));
+
+                            var dataFiles = await _oneLakeDownload.DownloadItemAsync(
+                                workspaceId, item, backupPath, dataProgress, cancellationToken);
+
+                            _logger.LogInformation(
+                                "Lakehouse data downloaded for {ItemName}: {Count} files",
+                                item.DisplayName, dataFiles);
+                        }
                     }
 
                     backupItems.Add(new BackupItemInfo

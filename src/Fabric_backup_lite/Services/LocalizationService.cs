@@ -48,6 +48,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     // ---- Destination ----
     public string DestinationFolderLabel => IsSpanish ? "Carpeta de destino" : "Destination folder";
     public string BrowseButton           => IsSpanish ? "Examinar..."        : "Browse...";
+    public string IncludeLakehouseDataLabel => IsSpanish
+        ? "Incluir datos de Lakehouse (tablas + archivos — puede ser muy grande)"
+        : "Include Lakehouse data (tables + files — can be very large)";
 
     // ---- Activity log ----
     public string ActivityLogLabel => IsSpanish ? "Log de actividad" : "Activity log";

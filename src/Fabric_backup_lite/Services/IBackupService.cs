@@ -14,5 +14,6 @@ public interface IBackupService
         IList<(string workspaceId, string workspaceName, FabricItem item)> selectedItems,
         string destinationPath,
         IProgress<BackupProgress>? progress = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        bool includeLakehouseData = false);
 }
