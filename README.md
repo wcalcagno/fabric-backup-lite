@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4?logo=windows" alt="Windows"/>
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License"/>
-  <img src="https://img.shields.io/badge/version-2.0.0-blue" alt="v2.0.0"/>
+  <img src="https://img.shields.io/badge/version-2.1.0-blue" alt="v2.1.0"/>
   <img src="https://img.shields.io/badge/lang-ES%20%7C%20EN-orange" alt="ES | EN"/>
 </p>
 
@@ -43,6 +43,11 @@ Se conecta al tenant de Microsoft Fabric/Power BI mediante la API REST oficial y
 > \* Los Semantic Models requieren capacidad Premium para exportar/importar.
 > \*\* Los Warehouses se descargan directamente desde OneLake (requiere `Azure Data Lake > user_impersonation`).
 > \*\*\* Los Warehouses no pueden recrearse vía API de Fabric; deben reconstruirse manualmente.
+
+### Novedades en v2.1.0
+
+- **Fix `403 InsufficientScopes` en backup:** la app solo solicitaba el scope `Workspace.Read.All`, suficiente para *listar* ítems pero no para leer su definición vía `getDefinition`. Ahora el token solicita también `Item.Read.All`, `Workspace.ReadWrite.All` e `Item.ReadWrite.All`, cubriendo backup y restore. Los usuarios afectados deben **cerrar sesión y volver a autenticarse** para reconsentir los nuevos permisos.
+- **Docs:** corregido el nombre del permiso `Item.Read.All` (antes `Item.ReadAll`) y agregada una fila de troubleshooting para este error.
 
 ### Novedades en v2.0.0
 
@@ -87,7 +92,7 @@ La app usa autenticación delegada con MSAL. Necesitas registrar una aplicación
 6. Ir a **API permissions** → **Add a permission** → **APIs my organization uses** → buscar **Power BI Service**
 7. Agregar permisos delegados:
    - `Workspace.Read.All` — para listar workspaces (backup)
-   - `Item.ReadAll` — para leer artefactos (backup)
+   - `Item.Read.All` — para leer artefactos (backup)
    - `Workspace.ReadWrite.All` — para crear workspaces y restaurar ítems (**nuevo en v2.0**)
    - `Item.ReadWrite.All` — para crear ítems vía API (**nuevo en v2.0**)
 8. **Para backup de Warehouses:** agregar también **Azure Data Lake** → Delegated → `user_impersonation`
@@ -172,6 +177,7 @@ Clic en **"▶ Iniciar Restore"**. El log muestra el progreso ítem por ítem.
 | Error | Causa probable | Solución |
 |---|---|---|
 | `AADSTS650057` | Falta permiso Azure Data Lake en el registro de la app | Agregar `Azure Data Lake > user_impersonation` en API permissions → Grant admin consent |
+| `GetDefinition failed (403 Forbidden): InsufficientScopes` | El token no pide el scope `Item.Read.All`; solo conceder el permiso en el registro no basta, la app debe **pedirlo** | Verificar que `Authentication:Scopes` en `appsettings.json` incluya `Item.Read.All` (y `Item.ReadWrite.All` para restore). Cerrar sesión y volver a autenticarte para reconsentir |
 | `GetDefinition failed (400 BadRequest)` | Formato no soportado para ese tipo | Ver el body del error en el log; el tipo puede requerir un parámetro específico |
 | `LRO failed: Dataset Workload...` | Semantic Model sin capacidad Premium o capacidad pausada | Se necesita capacidad Premium F SKU activa |
 | `401 Unauthorized` | Token expirado o permisos insuficientes | Cierra la sesión y vuelve a autenticarte |
@@ -263,6 +269,11 @@ It connects to your Microsoft Fabric/Power BI tenant through the official REST A
 > \*\* Warehouses are downloaded directly from OneLake (requires `Azure Data Lake > user_impersonation`).
 > \*\*\* Warehouses cannot be recreated via Fabric API; they must be rebuilt manually.
 
+### What's new in v2.1.0
+
+- **Fix `403 InsufficientScopes` on backup:** the app only requested the `Workspace.Read.All` scope, enough to *list* items but not to read their definition via `getDefinition`. The token now also requests `Item.Read.All`, `Workspace.ReadWrite.All` and `Item.ReadWrite.All`, covering both backup and restore. Affected users must **sign out and sign in again** to re-consent to the new permissions.
+- **Docs:** fixed the `Item.Read.All` permission name (was `Item.ReadAll`) and added a troubleshooting row for this error.
+
 ### What's new in v2.0.0
 
 - **Restore tab:** new "↩ Restore" tab alongside the Backup tab. Select the backup root folder and the app auto-detects all available backups.
@@ -306,7 +317,7 @@ The app uses delegated authentication with MSAL. You need to register an applica
 6. Go to **API permissions** → **Add a permission** → **APIs my organization uses** → search for **Power BI Service**
 7. Add delegated permissions:
    - `Workspace.Read.All` — to list workspaces (backup)
-   - `Item.ReadAll` — to read artifacts (backup)
+   - `Item.Read.All` — to read artifacts (backup)
    - `Workspace.ReadWrite.All` — to create workspaces and restore items (**new in v2.0**)
    - `Item.ReadWrite.All` — to create items via API (**new in v2.0**)
 8. **For Warehouse backup:** also add **Azure Data Lake** → Delegated → `user_impersonation`
@@ -391,6 +402,7 @@ Click **"▶ Start Restore"**. The log shows progress item by item.
 | Error | Likely cause | Solution |
 |---|---|---|
 | `AADSTS650057` | Missing Azure Data Lake permission on app registration | Add `Azure Data Lake > user_impersonation` in API permissions → Grant admin consent |
+| `GetDefinition failed (403 Forbidden): InsufficientScopes` | The token doesn't request the `Item.Read.All` scope; granting the permission on the app registration alone is not enough — the app must **request** it | Make sure `Authentication:Scopes` in `appsettings.json` includes `Item.Read.All` (and `Item.ReadWrite.All` for restore). Sign out and sign in again to re-consent |
 | `GetDefinition failed (400 BadRequest)` | Export format not supported for that type | Check error body in the log; the type may require a specific parameter |
 | `LRO failed: Dataset Workload...` | Semantic Model without Premium capacity or paused capacity | Active Premium F SKU capacity is required |
 | `401 Unauthorized` | Expired token or insufficient permissions | Sign out and sign in again |
